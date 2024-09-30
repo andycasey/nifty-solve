@@ -13,8 +13,8 @@ def construct_matern_32_weight_vector(n_modes: int, s: float = 1, λ: float = 1)
     if λ <= 0:
         raise ValueError("The regularization parameter `λ` must be non-negative.")    
     ω = (np.arange(n_modes) - n_modes // 2)
-    m = λ/((s*ω)**2 + 1)
-    return m + m * 1j
+    a = (λ/((s*ω)**2 + 1))
+    return 1/a #(a + a * 1j)
 
         
 
@@ -41,9 +41,9 @@ class Fourier1DBasis:
         if np.iscomplex(f).any():
             matvec_wrapper = lambda v: v
         else:
-            matvec_wrapper = lambda v: v.real
+            matvec_wrapper = lambda v: v
         
-        kwds = dict(eps=1e-6)
+        kwds = dict(eps=1e-16)
         kwds.update(finufft_kwargs or {})
         A = finufft.Plan(2, (self.n_modes, ), **kwds)
         AT = finufft.Plan(1, (self.n_modes, ), **kwds)
@@ -52,15 +52,15 @@ class Fourier1DBasis:
 
         inv_err = 1 if f_err is None else 1/f_err
         if Λ is not None:
-            if False:
+            if True:
                 op = np.multiply if Λ.ndim == 1 else np.dot
                 matvec = lambda c: matvec_wrapper(np.hstack([A.execute(c) * inv_err, op(Λ, c)]))
                 rmatvec = lambda f: AT.execute(f[:len(self.x)] * inv_err) + op(Λ, f[len(self.x):])
                 Y = np.hstack([f * inv_err, np.zeros(self.n_modes)])
                 shape = (len(self.x) + self.n_modes, self.n_modes)
             else:
-                matvec = lambda c: matvec_wrapper(A.execute(c) * inv_err)
-                rmatvec = lambda f: AT.execute(f * inv_err) * Λ
+                matvec = lambda c: matvec_wrapper(A.execute(c * Λ) * inv_err)
+                rmatvec = lambda f: AT.execute(f * inv_err) / Λ
                 shape = (len(self.x), self.n_modes)
                 Y = f * inv_err
         else:
@@ -93,7 +93,8 @@ class Fourier1DBasis:
         return self.c
     
     def predict(self, x: npt.ArrayLike | None = None, c: npt.ArrayLike | None = None) -> npt.ArrayLike:
-        return finufft.nufft1d2(x if x is not None else self.x, c if c is not None else self.c)
+        v = finufft.nufft1d2(x if x is not None else self.x, c if c is not None else self.c)
+        return np.sign(v) * np.abs(v)
 
 
 
@@ -163,7 +164,11 @@ if __name__ == "__main__":
         #(N, 0.01, 1), # to match Hogg & Villar deltaomega choice
         #(N, 0.5, 1),
         #(N, 0.1, 1),
-        (N, 0.5, 1),
+        #(N, 0.05, 1),
+        #(N, 0.5, 1),
+        #(N, 5e-3, 1),
+        (N, 0.05, 1),
+        #(N, 2, 1),
         #(N, 0.5, 1),
         #(N, 10.0, 1),
         #(N, 100, 1),
@@ -171,7 +176,15 @@ if __name__ == "__main__":
         #(N, 1e-2, 1),
         #(N, 10 * 0.002364489412645407, 1),
         #(N, 1e-3, 1),
-        #(N, 0.5 * 0.05 * np.pi/3, 1), # to match Hogg & Villar deltaomega choice
+        #(N, 0.05 * np.pi/3, 1e-5), # to match Hogg & Villar deltaomega choice\
+        #(N, 0.05, 1),
+        #(N, 0.025, 1),
+        (N, 0.086, 1),
+        (N, 0.1, 1),
+        #(N, 0.1, 1e-1),
+        #(N, 0.09, 1),
+        #(N, 0.085, 1),        
+        #(N, 0.08, 1),
         #(N, 1e-6, 1),
         #(N, 0.1, 1),
         #(N, 0.01, 100),
@@ -205,7 +218,7 @@ if __name__ == "__main__":
 
         if i == 0:
             #axes[0].plot(xi, yi, c="#666666", lw=2, label="Truth", ms=0, zorder=-1)
-            axes[0].scatter(x_true, f_obs, c="k", s=100, label=f"Noiseless (non-uniform) data samples ($M={M}$)")
+            axes[0].scatter(x_true, f_obs, c="k", s=100, label=f"Noiseless data samples")
 
         c = colors[i]
         axes[0].scatter(x_true, f_pred, c=c, s=30)
