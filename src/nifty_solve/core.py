@@ -9,12 +9,7 @@ from typing import Literal, Optional, Union
 from functools import cached_property
 from timeit import default_timer as timer
 
-def construct_matern_32_weight_vector(n_modes: int, s: float = 1, λ: float = 1) -> npt.ArrayLike:
-    if λ <= 0:
-        raise ValueError("The regularization parameter `λ` must be non-negative.")    
-    ω = (np.arange(n_modes) - n_modes // 2)
-    a = (λ/((s*ω)**2 + 1))
-    return 1/a #(a + a * 1j)
+
 
         
 
@@ -37,12 +32,7 @@ class Fourier1DBasis:
         **kwargs
     ):
         self._check_sizes(f)
-        
-        if np.iscomplex(f).any():
-            matvec_wrapper = lambda v: v
-        else:
-            matvec_wrapper = lambda v: v
-        
+                
         kwds = dict(eps=1e-16)
         kwds.update(finufft_kwargs or {})
         A = finufft.Plan(2, (self.n_modes, ), **kwds)
@@ -50,24 +40,31 @@ class Fourier1DBasis:
         A.setpts(self.x)
         AT.setpts(self.x)
 
-        inv_err = 1 if f_err is None else 1/f_err
-        if Λ is not None:
-            if True:
-                op = np.multiply if Λ.ndim == 1 else np.dot
-                matvec = lambda c: matvec_wrapper(np.hstack([A.execute(c) * inv_err, op(Λ, c)]))
-                rmatvec = lambda f: AT.execute(f[:len(self.x)] * inv_err) + op(Λ, f[len(self.x):])
-                Y = np.hstack([f * inv_err, np.zeros(self.n_modes)])
-                shape = (len(self.x) + self.n_modes, self.n_modes)
-            else:
-                matvec = lambda c: matvec_wrapper(A.execute(c * Λ) * inv_err)
-                rmatvec = lambda f: AT.execute(f * inv_err) / Λ
-                shape = (len(self.x), self.n_modes)
-                Y = f * inv_err
-        else:
-            Y = f * inv_err
-            matvec = lambda c: matvec_wrapper((A.execute(c) * inv_err))
-            rmatvec = lambda f: AT.execute(f * inv_err)
+        inv_err = 1 if f_err is None else 1/f_err        
+        Λ = 1 if Λ is None else Λ
+    
+        if True:
             shape = (len(self.x), self.n_modes)
+            Λ_scaled = Λ**-0.5
+            def matvec(c):
+                return A.execute(c * Λ_scaled) * inv_err
+
+            def rmatvec(f):
+                return AT.execute(f * inv_err) * Λ_scaled
+
+            Y = f * inv_err
+        else:
+            matvec = lambda c: A.execute(c) * inv_err
+            rmatvec = lambda f: AT.execute(f * inv_err) * Λ**-2.0
+            shape = (len(self.x), self.n_modes)
+            Y = f * inv_err
+        
+        """
+        Y = f * inv_err
+        matvec = lambda c: (A.execute(c) * inv_err)
+        rmatvec = lambda f: AT.execute(f * inv_err)
+        shape = (len(self.x), self.n_modes)
+        """
         
         lo = sp.LinearOperator(
             shape,
@@ -80,6 +77,8 @@ class Fourier1DBasis:
         solve_time = -timer()
         x0 = lo.rmatvec(Y)
         self.c, *v = sp.lsqr(lo, Y, show=True, atol=0, btol=0, conlim=0, x0=x0, **kwargs)
+        if Λ is not None:
+            self.c *= Λ**-0.5
         solve_time += timer()
         self.meta = dict(
             kwargs=kwargs,
@@ -93,9 +92,21 @@ class Fourier1DBasis:
         return self.c
     
     def predict(self, x: npt.ArrayLike | None = None, c: npt.ArrayLike | None = None) -> npt.ArrayLike:
-        v = finufft.nufft1d2(x if x is not None else self.x, c if c is not None else self.c)
+        return finufft.nufft1d2(x if x is not None else self.x, c if c is not None else self.c)
+
+    def predict_magnitude(self, x: npt.ArrayLike | None = None, c: npt.ArrayLike | None = None) -> npt.ArrayLike:
+        v = self.predict(x, c)
         return np.sign(v) * np.abs(v)
 
+
+
+def ω(P):
+    K = np.arange(P) - P // 2
+    δω = (2 * np.pi) / P
+    return np.abs(K * δω)
+
+def construct_matern_32_weight_vector(n_modes: int, s: float = 1) -> npt.ArrayLike:
+    return 1/((s*ω(n_modes))**2 + 1)
 
 
 if __name__ == "__main__":
@@ -155,6 +166,8 @@ if __name__ == "__main__":
     ax.plot(v, g)
     ax.semilogx()
 
+
+
     model = Fourier1DBasis(x_true, N)
     nnn = 2048
     #xi = np.arange(0.5 * T / nnn, T, T / nnn)
@@ -163,41 +176,38 @@ if __name__ == "__main__":
         None,
         #(N, 0.01, 1), # to match Hogg & Villar deltaomega choice
         #(N, 0.5, 1),
-        #(N, 0.1, 1),
-        #(N, 0.05, 1),
-        #(N, 0.5, 1),
-        #(N, 5e-3, 1),
-        (N, 0.05, 1),
-        #(N, 2, 1),
-        #(N, 0.5, 1),
-        #(N, 10.0, 1),
-        #(N, 100, 1),
-        #(N, 1e-1, 1),
-        #(N, 1e-2, 1),
-        #(N, 10 * 0.002364489412645407, 1),
-        #(N, 1e-3, 1),
+        #(16.297, ),
+        (1, ),
+        (10, ),
+        (25, ),
+        (50, ),
+        (100, ),
+
         #(N, 0.05 * np.pi/3, 1e-5), # to match Hogg & Villar deltaomega choice\
-        #(N, 0.05, 1),
-        #(N, 0.025, 1),
-        (N, 0.086, 1),
-        (N, 0.1, 1),
-        #(N, 0.1, 1e-1),
-        #(N, 0.09, 1),
-        #(N, 0.085, 1),        
-        #(N, 0.08, 1),
-        #(N, 1e-6, 1),
-        #(N, 0.1, 1),
-        #(N, 0.01, 100),
-        #(N, 1e-4, 1),
-        #(N, 1e-5, 1e-3),
-
-        
-#        (N, 1e-4, 1e-6),
-        #(N, 1e-4, 100),
-        #(N, 1e-6, 100),
     ]
+    """
+    (1, ),
+    (2, ),
+    (3, ),
+    (4, ),
+    (5, ),
+    (6, ),
+    (7, ),
+    (8, ),
+    (9, ),
+    (10, ),    
+    (10.0, ),
+    (20.0, ),
+    (30.0, ),
+    (40.0, ),
+    (50.0, ),
+    (60.0, ),
+    (70.0, ),
+    (80.0, ),
+    (90.0, ),
+    """
 
-    colors = ("tab:red", "tab:blue", "tab:green", "tab:orange", "tab:purple", "tab:brown", "tab:pink")
+    colors = ("tab:red", "tab:blue", "tab:green", "tab:orange", "tab:purple", "tab:brown", "tab:pink", "cyan", "magenta", "yellow", "black")
 
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))#, sharex=True, sharey=True)
     
@@ -208,13 +218,14 @@ if __name__ == "__main__":
             kwargs = {}
             label="None"
         else:
-            kwargs = dict(Λ=construct_matern_32_weight_vector(*args))
-            label = f"{args[1]:.2e} {args[2]:.2e}"
+            width, *_ = args
+            kwargs = dict(Λ=construct_matern_32_weight_vector(N, width)**-2)
+            label = f"width={width}"
 
         result = model.solve(f_obs, f_err, **kwargs)
-        f_pred = model.predict(x_true)
+        f_pred = model.predict_magnitude(x_true)
 
-        fi = model.predict(xi)
+        fi = model.predict_magnitude(xi)
 
         if i == 0:
             #axes[0].plot(xi, yi, c="#666666", lw=2, label="Truth", ms=0, zorder=-1)
