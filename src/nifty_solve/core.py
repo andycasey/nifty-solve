@@ -40,45 +40,36 @@ class Fourier1DBasis:
         A.setpts(self.x)
         AT.setpts(self.x)
 
-        inv_err = 1 if f_err is None else 1/f_err        
-        Λ = 1 if Λ is None else Λ
-    
-        if True:
-            shape = (len(self.x), self.n_modes)
-            Λ_scaled = Λ**-0.5
-            def matvec(c):
-                return A.execute(c * Λ_scaled) * inv_err
+        inv_err = 1 if f_err is None else 1/f_err                
+        Λ_inv_sqrt = 1 if Λ is None else Λ**-0.5
 
-            def rmatvec(f):
-                return AT.execute(f * inv_err) * Λ_scaled
-
-            Y = f * inv_err
-        else:
-            matvec = lambda c: A.execute(c) * inv_err
-            rmatvec = lambda f: AT.execute(f * inv_err) * Λ**-2.0
-            shape = (len(self.x), self.n_modes)
-            Y = f * inv_err
-        
         """
+        # Ridge regularization (Tikhonov)
+        matvec = lambda c: A.execute(c) * inv_err
+        rmatvec = lambda f: AT.execute(f * inv_err) * Λ**-2.0
+        shape = (len(self.x), self.n_modes)
+        Y = f * inv_err        
+        #and self.c *= Λ**-0.5
+
+        # No regularization
         Y = f * inv_err
         matvec = lambda c: (A.execute(c) * inv_err)
         rmatvec = lambda f: AT.execute(f * inv_err)
         shape = (len(self.x), self.n_modes)
         """
         
+        Y = (f * inv_err).astype(complex)        
         lo = sp.LinearOperator(
-            shape,
-            matvec=matvec,
-            rmatvec=rmatvec,
+            (len(self.x), self.n_modes),
+            matvec=lambda c: A.execute(c * Λ_inv_sqrt) * inv_err,
+            rmatvec=lambda f: AT.execute(f * inv_err) * Λ_inv_sqrt,
             dtype=complex
         )
 
-        Y = Y.astype(complex)
         solve_time = -timer()
         x0 = lo.rmatvec(Y)
         self.c, *v = sp.lsqr(lo, Y, show=True, atol=0, btol=0, conlim=0, x0=x0, **kwargs)
-        if Λ is not None:
-            self.c *= Λ**-0.5
+        self.c *= Λ_inv_sqrt
         solve_time += timer()
         self.meta = dict(
             kwargs=kwargs,
