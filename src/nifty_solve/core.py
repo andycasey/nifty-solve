@@ -114,6 +114,7 @@ class Fourier1DBasis:
         )
 
         Y = (f * f_inv_err).astype(complex)        
+
         lsqr_kwargs = dict(atol=0, btol=0, conlim=0, x0=lo.rmatvec(Y), calc_var=True)
         lsqr_kwargs.update(**kwargs)
         t_plan += timer()
@@ -258,7 +259,7 @@ if __name__ == "__main__":
 
         if args is None:
             kwargs = {}
-            label="None"
+            label = "No regularization"
         else:
             width, *_ = args
             kwargs = dict(Λ=construct_matern_32_weight_vector(N, width)**-2)
@@ -273,13 +274,13 @@ if __name__ == "__main__":
 
         if i == 0:
             #axes[0].plot(xi, yi, c="#666666", lw=2, label="Truth", ms=0, zorder=-1)
-            axes[0].scatter(x_true, f_obs, c="k", s=100, label=f"Noiseless data samples")
+            axes[0].scatter(x_true, f_obs, c="k", s=100, zorder=1000, label=f"Data ($N = 23$)")
 
         c = colors[i]
-        axes[0].scatter(x_true, f_pred, c=c, s=30)
+        axes[0].scatter(x_true, f_pred, c=c, s=30, zorder=50 + i)
         draws = generate_complex_mvn_samples(μ, np.diag(Σ), 30)
         for draw in draws:
-            axes[0].plot(xi, model.predict_magnitude(xi, draw), c="tab:blue", alpha=0.1)
+            axes[0].plot(xi, model.predict_magnitude(xi, draw), c=c, alpha=0.1)
         
         axes[0].plot(xi, fi, c=c, lw=1, ms=0, label=label)
         axes[0].set_xlim(-np.pi, +np.pi)
@@ -288,9 +289,9 @@ if __name__ == "__main__":
         v = np.sqrt(np.abs(Σ))
         m = np.sqrt(np.abs(μ.real)**2 + np.abs(μ.imag)**2)
         axes[1].plot(m, c=c)
-        axes[1].fill_between(np.arange(m.size), m - v, m + v, facecolor="tab:blue", alpha=0.5)
-        axes[1].set_xlabel(r"Mode $M$")
-        axes[1].set_ylabel("Magnitude")
+        axes[1].fill_between(np.arange(m.size), m - v, m + v, facecolor=c, alpha=0.5)
+        axes[1].set_xlabel(r"Fourier mode index")
+        axes[1].set_ylabel(r"Strength (magnitude)")
         axes[1].set_xlim(0, N)
         # axes[2].plot(np.abs(result.imag), c=c)
 
