@@ -43,7 +43,6 @@ jobs:
 
       - name: Coveralls
         env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-          COVERALLS_SERVICE_NAME: github-actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          uv run coveralls --service=github-actions
+          uv run coveralls --service=github
