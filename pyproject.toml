@@ -1,0 +1,40 @@
+[project]
+name = "nifty-solve"
+version = "0.1.0" 
+readme = "README.md"
+license = {text = "LICENSE.md"}
+description = "Nifty solver" 
+keywords = ["astronomy software"]
+authors = [
+  {name = "Andy Casey", email = "andrew.casey@monash.edu"},
+]
+maintainers = [
+  {name = "Andy Casey", email = "andrew.casey@monash.edu"},
+]
+dependencies = [
+  "numpy",
+  "finufft",
+  "pylops",
+  "scipy",
+]
+#requires-python = ">= 3.9"
+
+[classifiers]
+development_status = "4 - Beta"
+intended_audience = "Science/Research"
+natural_language = "English"
+programming_language = "Python :: 3"
+topic = ["Documentation :: Sphinx", "Topic :: Software Development :: Libraries  :: Python Modules"]
+
+[tool.setuptools.packages.find]
+where = ["src/"]
+include = ["nifty_solve"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "pytest-sugar",
+  "pre-commit",
+  "black",
+]
