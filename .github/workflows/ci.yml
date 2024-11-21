@@ -37,3 +37,12 @@ jobs:
       - name: "Run tests"
         run: |
           uv run pytest tests
+
+      - name: "Install Coveralls"
+        run: uv pip install coveralls
+
+      - name: Coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          uv run coveralls --service=github
