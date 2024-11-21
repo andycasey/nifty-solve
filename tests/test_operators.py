@@ -40,7 +40,7 @@ def test_1d_real_operator():
 
     for N, P in NPs:
         x = np.linspace(-np.pi, np.pi, N)
-        A = Finufft1DRealOperator(x, P)
+        A = Finufft1DRealOperator(x, P, eps=1e-10)
 
         dottest(A)
 
