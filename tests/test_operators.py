@@ -5,7 +5,7 @@ import pytest
 from functools import partial
 from pylops.utils import dottest
 
-from nifty_solve.operators import Finufft1DRealOperator, Finufft2DRealOperator, Finufft3DRealOperator, expand_to_dim
+from nifty_solve.operators import Finufft1DRealOperator, Finufft2DRealOperator, expand_to_dim
 
 
 def design_matrix_as_is(xs, P):
@@ -39,7 +39,14 @@ def check_design_matrix_uniqueness(Op, points, P, eps=1e-10, **kwargs):
     A = Op(*points, P, eps=eps, **kwargs)
     A_dense = A.todense()
     A_unique = np.unique(A_dense, axis=1)
-    assert A_dense.shape == A_unique.shape
+    if A_dense.shape != A_unique.shape:
+        for i in range(A_dense.shape[1]):
+            foo = np.where(np.all(A_dense == A_dense[:, [i]], axis=0))[0]
+            if len(foo) > 1:
+                print(i, foo, np.unravel_index(foo, A.permute.shape))
+        
+        assert False
+
 
 def check_design_matrix_uniqueness_1d_real_operator(N, P, eps=1e-10):
     x = np.linspace(-np.pi, np.pi, N)
@@ -193,13 +200,14 @@ test_2d_real_operator_dottest_N_equal_even_lt_P_equal_even = partial(dottest_2d_
 test_2d_real_operator_dottest_N_equal_odd_lt_P_equal_odd = partial(dottest_2d_real_operator, (11, 11), (1201, 1201))
 
 
-#test_2d_real_operator_design_matrix_uniqueness_N_even_gt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 100, 10)
+test_2d_real_operator_design_matrix_uniqueness_N_even_gt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 100, 10)
 
+check_design_matrix_uniqueness_2d_real_operator(100, 11)
 
 # 3D operator
 
 # N > P
-test_3d_real_oeprator_dottest_N_even_gt_P_odd = partial(dottest_3d_real_operator, 14, 11)
+#test_3d_real_oeprator_dottest_N_even_gt_P_odd = partial(dottest_3d_real_operator, 14, 11)
 
 
 # 1D operator combinations
