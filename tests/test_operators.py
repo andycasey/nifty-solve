@@ -1,4 +1,3 @@
-
 import numpy as np
 import itertools
 import pytest
@@ -7,18 +6,9 @@ from pylops.utils import dottest
 
 from nifty_solve.operators import FinufftRealOperator, Finufft1DRealOperator, Finufft2DRealOperator, Finufft3DRealOperator, expand_to_dim, permute_mask
 
+EPSILON = 1e-9
 
 def design_matrix_as_is(xs, P):
-    """
-    Take in a set of x positions and return the Fourier design matrix.
-
-    ## Bugs:
-    - Needs comment header.
-    
-    ## Comments:
-    - The code looks different from the paper because Python zero-indexes.
-    - This could be replaced with something that makes use of finufft.
-    """
     X = np.ones_like(xs).reshape(len(xs), 1)
     for j in range(1, P):
         if j % 2 == 0:
@@ -28,15 +18,14 @@ def design_matrix_as_is(xs, P):
     return X
 
 
-
-def dottest_1d_real_operator(N, P, eps=1e-10):
+def dottest_1d_real_operator(N, P):
     x = np.linspace(-np.pi, np.pi, N)
-    A = Finufft1DRealOperator(x, P, eps=eps)
+    A = Finufft1DRealOperator(x, P, eps=EPSILON)
     dottest(A)
 
 
-def check_design_matrix_uniqueness(Op, points, P, eps=1e-10, **kwargs):
-    A = Op(*points, P, eps=eps, **kwargs)
+def check_design_matrix_uniqueness(Op, points, P, **kwargs):
+    A = Op(*points, P, eps=EPSILON, **kwargs)
     A_dense = A.todense()
     A_unique = np.unique(A_dense, axis=1)
     if A_dense.shape != A_unique.shape:
@@ -48,21 +37,21 @@ def check_design_matrix_uniqueness(Op, points, P, eps=1e-10, **kwargs):
         assert False
 
 
-def check_design_matrix_uniqueness_1d_real_operator(N, P, eps=1e-10):
+def check_design_matrix_uniqueness_1d_real_operator(N, P):
     x = np.linspace(-np.pi, np.pi, N)
-    check_design_matrix_uniqueness(Finufft1DRealOperator, (x, ), P, eps=eps)
+    check_design_matrix_uniqueness(Finufft1DRealOperator, (x, ), P)
 
-def check_design_matrix_uniqueness_2d_real_operator(N, P, eps=1e-10):
+def check_design_matrix_uniqueness_2d_real_operator(N, P):
     Nx, Ny = expand_to_dim(N, 2)
 
     x = np.random.uniform(-np.pi, np.pi, Nx)
     y = np.random.uniform(-np.pi, np.pi, Ny)
     X, Y = map(lambda x: x.flatten(), np.meshgrid(x, y))
 
-    check_design_matrix_uniqueness(Finufft2DRealOperator, (X, Y), P, eps=eps)
+    check_design_matrix_uniqueness(Finufft2DRealOperator, (X, Y), P)
 
 
-def check_design_matrix_uniqueness_3d_real_operator(N, P, eps=1e-10):
+def check_design_matrix_uniqueness_3d_real_operator(N, P):
     Nx, Ny, Nz = expand_to_dim(N, 3)
 
     x = np.random.uniform(-np.pi, np.pi, Nx)
@@ -70,14 +59,14 @@ def check_design_matrix_uniqueness_3d_real_operator(N, P, eps=1e-10):
     z = np.random.uniform(-np.pi, np.pi, Nz)
     X, Y, Z = map(lambda x: x.flatten(), np.meshgrid(x, y, z))
 
-    check_design_matrix_uniqueness(Finufft3DRealOperator, (X, Y, Z), P, eps=eps)
+    check_design_matrix_uniqueness(Finufft3DRealOperator, (X, Y, Z), P)
     
     
 
-def check_1d_real_operator_matches_design_matrix(N, P, eps=1e-10):
+def check_1d_real_operator_matches_design_matrix(N, P):
     x = np.linspace(-np.pi, np.pi, N)
 
-    A = Finufft1DRealOperator(x, P, eps=1e-10)
+    A = Finufft1DRealOperator(x, P, eps=EPSILON)
 
     mode_indices = np.zeros(P, dtype=int)
     mode_indices[2::2] = np.arange(1, P//2 + (P % 2))
@@ -87,7 +76,7 @@ def check_1d_real_operator_matches_design_matrix(N, P, eps=1e-10):
     assert np.allclose(A.todense()[:, mode_indices], A1)
 
 
-def dottest_2d_real_operator(N, P, eps=1e-10):
+def dottest_2d_real_operator(N, P):
     if isinstance(N, int):
         Nx = Ny = N
     else:
@@ -96,15 +85,15 @@ def dottest_2d_real_operator(N, P, eps=1e-10):
     y = np.linspace(-np.pi, np.pi, Ny)
 
     X, Y = map(lambda x: x.flatten(), np.meshgrid(x, y))
-    A = Finufft2DRealOperator(X, Y, P, eps=eps)
+    A = Finufft2DRealOperator(X, Y, P, eps=EPSILON)
     dottest(A)
 
 
-def dottest_3d_real_operator(N, P, eps=1e-10):
+def dottest_3d_real_operator(N, P):
     X = np.random.uniform(-np.pi, +np.pi, N)
     Y = np.random.uniform(-np.pi, +np.pi, N)
     Z = np.random.uniform(-np.pi, +np.pi, N)
-    A = Finufft3DRealOperator(X, Y, Z, P, eps=eps)
+    A = Finufft3DRealOperator(X, Y, Z, P, eps=EPSILON)
     dottest(A)
 
 def test_incorrect_data_lengths_2d_real_operator():
@@ -125,6 +114,7 @@ def test_expand_to_dims():
         expand_to_dim((1,2,3), 2)
     with pytest.raises(TypeError):
         expand_to_dim("10", 3)
+    
 
 
 def test_permute_mask():
