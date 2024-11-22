@@ -1,6 +1,8 @@
+<div align="Center">
+
 # nifty-solve
 
-Fit large models with Fourier bases without ever constructing the design matrix.
+[![Coverage Status](https://coveralls.io/repos/github/andycasey/nifty-solve/badge.svg?branch=main)](https://coveralls.io/github/andycasey/nifty-solve?branch=main)
 
-This is in development. The 1D implementation is correct and well-tested. 2D and 3D are not yet.
-
+Fit very flexible models using Fourier bases without ever constructing the design matrix.
+</div>

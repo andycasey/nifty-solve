@@ -158,7 +158,6 @@ test_1d_real_operator_dottest_N_even_gt_P_odd = partial(dottest_1d_real_operator
 test_1d_real_operator_dottest_N_odd_gt_P_odd = partial(dottest_1d_real_operator, 1201, 11)
 test_1d_real_operator_dottest_N_odd_gt_P_even = partial(dottest_1d_real_operator, 1201, 10)
 
-"""
 # N < P
 test_1d_real_operator_dottest_N_even_lt_P_even = partial(dottest_1d_real_operator, 170, 338)
 test_1d_real_operator_dottest_N_even_lt_P_odd = partial(dottest_1d_real_operator, 170, 341)
@@ -311,4 +310,3 @@ test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_even_even = partial(
 test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 7, (11, 10, 8))
 test_3d_real_operator_matches_design_matrix_N_even_lt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 7, (8, 11, 14))
 test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 7, (10, 14, 11))
-"""
