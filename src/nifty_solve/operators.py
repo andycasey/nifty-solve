@@ -118,7 +118,7 @@ def expand_to_dim(n_modes, n_dims):
     if isinstance(n_modes, int):
         return (n_modes, ) * n_dims
     else:
-        if isinstance(n_modes, (tuple, list, np.array)):
+        if isinstance(n_modes, (tuple, list, np.ndarray)):
             if len(n_modes) == n_dims:
                 return tuple(n_modes)
             else:
