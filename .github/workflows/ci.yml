@@ -47,4 +47,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           uv run coverage run --source=src/ -m pytest tests/
-          coveralls
+          uv run coveralls
