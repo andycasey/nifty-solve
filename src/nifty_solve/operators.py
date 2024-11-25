@@ -22,7 +22,19 @@ class FinufftRealOperator(LinearOperator):
         self._plan_rmatvec = finufft.Plan(1, self.n_modes, dtype=self.DTYPE_FINUFFT, **kwargs)
         self._plan_matvec.setpts(*points)
         self._plan_rmatvec.setpts(*points)
+        self._slice_args = tuple(slice(_halfish(P), None) for P in self.n_modes)
         return None
+
+    def _pre_process_matvec(self, c):
+        c = c.reshape(self.n_modes)
+        f = 1j * c.astype(self.DTYPE_COMPLEX)
+        f[*self._slice_args] = c[*self._slice_args]
+        return f
+        
+    def _post_process_rmatvec(self, f):
+        c = f.imag
+        c[*self._slice_args] = f[*self._slice_args].real
+        return c
 
     def _matvec(self, c):
         return self._plan_matvec.execute(self._pre_process_matvec(c)).real
@@ -47,14 +59,8 @@ class Finufft1DRealOperator(FinufftRealOperator):
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """        
         super().__init__(x, n_modes=n_modes, **kwargs)
-        self._Hx = _halfish(n_modes)
         return None
 
-    def _pre_process_matvec(self, c):
-        return np.hstack([1j * c[:self._Hx], c[self._Hx:]], dtype=self.DTYPE_COMPLEX)
-
-    def _post_process_rmatvec(self, f):
-        return np.hstack([f[:self._Hx].imag, f[self._Hx:].real], dtype=self.DTYPE_REAL)
 
 class Finufft2DRealOperator(FinufftRealOperator):
     def __init__(self, x: npt.ArrayLike, y: npt.ArrayLike, n_modes: Union[int, tuple[int, int]], **kwargs):
@@ -76,19 +82,7 @@ class Finufft2DRealOperator(FinufftRealOperator):
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """        
         super().__init__(x, y, n_modes=n_modes, **kwargs)
-        self._Hx, self._Hy = tuple(map(_halfish, self.n_modes))
         return None
-
-    def _pre_process_matvec(self, c):
-        c = c.reshape(self.n_modes)
-        f = -1j * c.astype(self.DTYPE_COMPLEX)
-        f[self._Hx:, self._Hy:] = c[self._Hx:, self._Hy:]
-        return f
-
-    def _post_process_rmatvec(self, f):
-        c = -f.imag
-        c[self._Hx:, self._Hy:] = f[self._Hx:, self._Hy:].real
-        return c
 
 class Finufft3DRealOperator(FinufftRealOperator):
     def __init__(self, x: npt.ArrayLike, y: npt.ArrayLike, z: npt.ArrayLike, n_modes: Union[int, tuple[int, int, int]], **kwargs):
@@ -113,19 +107,7 @@ class Finufft3DRealOperator(FinufftRealOperator):
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """        
         super().__init__(x, y, z, n_modes=n_modes, **kwargs)
-        self._Hx, self._Hy, self._Hz = tuple(map(_halfish, self.n_modes))
         return None
-
-    def _pre_process_matvec(self, c):
-        c = c.reshape(self.n_modes)
-        f = -1j * c.astype(self.DTYPE_COMPLEX)
-        f[self._Hx:, self._Hy:, self._Hz:] = c[self._Hx:, self._Hy:, self._Hz:]
-        return f
-
-    def _post_process_rmatvec(self, f):
-        c = -f.imag
-        c[self._Hx:, self._Hy:, self._Hz:] = f[self._Hx:, self._Hy:, self._Hz:].real
-        return c
 
 def expand_to_dim(n_modes, n_dims):
     if isinstance(n_modes, int):
