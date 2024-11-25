@@ -12,11 +12,12 @@ class FinufftRealOperator(LinearOperator):
         n_modes = expand_to_dim(n_modes, len(points))
         super().__init__(dtype=np.float64, shape=(len(points[0]), int(np.prod(n_modes))))
         self.explicit = False
-        self._plan_matvec = finufft.Plan(2, n_modes, modeord=1, **kwargs)
-        self._plan_rmatvec = finufft.Plan(1, n_modes, modeord=1, **kwargs)
+        self._finufft_kwds = kwargs.copy()        
+        self._plan_matvec = finufft.Plan(2, n_modes, **self._finufft_kwds)
+        self._plan_rmatvec = finufft.Plan(1, n_modes, **self._finufft_kwds)
         self._plan_matvec.setpts(*points)
         self._plan_rmatvec.setpts(*points)
-        self._permute_mask = permute_mask(*n_modes)
+        self._permute_mask = permute_mask(*n_modes, modeord=self._finufft_kwds.get("modeord", 0))
         self._permute_mask_flat = self._permute_mask.flatten()
         return None
     
@@ -37,6 +38,7 @@ class FinufftRealOperator(LinearOperator):
 
     def _rmatvec(self, f):
         return self._post_process_rmatvec(self._plan_rmatvec.execute(f.astype(np.complex128)))
+
 
 class Finufft1DRealOperator(FinufftRealOperator):
     def __init__(self, x: npt.ArrayLike, n_modes: int, **kwargs):
@@ -104,13 +106,22 @@ class Finufft3DRealOperator(FinufftRealOperator):
         super().__init__(x, y, z, n_modes=n_modes, **kwargs)
         return None
 
-def permute_mask(*P):
-    args = [1] + list(map(_permute_mask, P))
+
+def permute_mask(*P, modeord=0):
+    if modeord:
+        f = _permute_mask_modeord_1
+    else:
+        f = _permute_mask_modeord_0
+    args = [1] + list(map(f, P))
     while len(args) > 2:
         args[-2:] = [np.kron(args[-2], args[-1])]
     return np.kron(*args).reshape(P).astype(bool)
 
-def _permute_mask(P):
+def _permute_mask_modeord_0(P):
+    H = P // 2 + (P % 2)
+    return np.hstack([np.zeros(P - H), np.ones(H)])
+
+def _permute_mask_modeord_1(P):
     H = P // 2 + (P % 2)
     return np.hstack([np.ones(H), np.zeros(P - H)])
 

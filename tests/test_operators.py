@@ -66,7 +66,7 @@ def check_design_matrix_uniqueness_3d_real_operator(N, P):
 def check_1d_real_operator_matches_design_matrix(N, P):
     x = np.linspace(-np.pi, np.pi, N)
 
-    A = Finufft1DRealOperator(x, P, eps=EPSILON)
+    A = Finufft1DRealOperator(x, P, modeord=1, eps=EPSILON)
 
     mode_indices = np.zeros(P, dtype=int)
     mode_indices[2::2] = np.arange(1, P//2 + (P % 2))
