@@ -53,7 +53,7 @@ class Finufft1DRealOperator(FinufftRealOperator):
         return None
 
     def _pre_process_matvec(self, c):
-        return np.hstack([-1j * c[:self._Hx], c[self._Hx:]], dtype=self.DTYPE_COMPLEX)
+        return np.hstack([1j * c[:self._Hx], c[self._Hx:]], dtype=self.DTYPE_COMPLEX)
 
     def _post_process_rmatvec(self, f):
         return np.hstack([f[:self._Hx].imag, f[self._Hx:].real], dtype=self.DTYPE_REAL)
@@ -83,12 +83,12 @@ class Finufft2DRealOperator(FinufftRealOperator):
 
     def _pre_process_matvec(self, c):
         c = c.reshape(self.n_modes)
-        f = -1j * c.astype(self.DTYPE_COMPLEX)
+        f = 1j * c.astype(self.DTYPE_COMPLEX)
         f[self._Hx:, self._Hy:] = c[self._Hx:, self._Hy:]
         return f
 
     def _post_process_rmatvec(self, f):
-        c = -f.imag
+        c = f.imag
         c[self._Hx:, self._Hy:] = f[self._Hx:, self._Hy:].real
         return c
 
@@ -120,12 +120,12 @@ class Finufft3DRealOperator(FinufftRealOperator):
 
     def _pre_process_matvec(self, c):
         c = c.reshape(self.n_modes)
-        f = -1j * c.astype(self.DTYPE_COMPLEX)
+        f = 1j * c.astype(self.DTYPE_COMPLEX)
         f[self._Hx:, self._Hy:, self._Hz:] = c[self._Hx:, self._Hy:, self._Hz:]
         return f
 
     def _post_process_rmatvec(self, f):
-        c = -f.imag
+        c = f.imag
         c[self._Hx:, self._Hy:, self._Hz:] = f[self._Hx:, self._Hy:, self._Hz:].real
         return c
 
