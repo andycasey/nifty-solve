@@ -5,24 +5,22 @@ from pylops import LinearOperator, Diagonal
 from typing import Optional, Union
 
 class FinufftRealOperator(LinearOperator):
-
     def __init__(self, *points, n_modes: Union[int, tuple[int]], **kwargs):
         if len(set(map(len, points))) != 1:
             raise ValueError("All point arrays must have the same length.")
         self.n_modes = expand_to_dim(n_modes, len(points))
 
         if points[0].dtype == np.float64:
-            self.DTYPE_REAL, self.DTYPE_FINUFFT, self.DTYPE_COMPLEX = (np.float64, "complex128", np.complex128)
+            self.DTYPE_REAL, self.DTYPE_COMPLEX = (np.float64, np.complex128)
         else:
-            self.DTYPE_REAL, self.DTYPE_FINUFFT, self.DTYPE_COMPLEX = (np.float32, "complex64", np.complex64)
+            self.DTYPE_REAL, self.DTYPE_COMPLEX = (np.float32, np.complex64)
 
         super().__init__(dtype=self.DTYPE_REAL, shape=(len(points[0]), int(np.prod(self.n_modes))))
         self.explicit = False
-        self._plan_matvec = finufft.Plan(2, self.n_modes, dtype=self.DTYPE_FINUFFT, **kwargs)
-        self._plan_rmatvec = finufft.Plan(1, self.n_modes, dtype=self.DTYPE_FINUFFT, **kwargs)
+        self._plan_matvec = finufft.Plan(2, self.n_modes, dtype=self.DTYPE_COMPLEX.__name__, **kwargs)
+        self._plan_rmatvec = finufft.Plan(1, self.n_modes, dtype=self.DTYPE_COMPLEX.__name__, **kwargs)
         self._plan_matvec.setpts(*points)
         self._plan_rmatvec.setpts(*points)
-        self._slice_args = tuple(slice(_halfish(P), None) for P in self.n_modes)
         return None
 
     def _matvec(self, c):
