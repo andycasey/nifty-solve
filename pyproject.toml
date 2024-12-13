@@ -39,3 +39,7 @@ dev = [
   "pre-commit",
   "black",
 ]
+jax = [
+  "jax",
+  "jax-finufft"
+]
