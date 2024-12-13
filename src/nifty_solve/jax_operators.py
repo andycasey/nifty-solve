@@ -3,6 +3,8 @@
 import warnings
 from typing import Union
 
+import numpy as np
+
 try:
     import jax.numpy as jnp
     from jax_finufft import nufft1, nufft2
@@ -54,7 +56,7 @@ class JaxFinufftRealOperator(LinearOperator, metaclass=CombinedMeta):
 
         # Set the operator properties
         super().__init__(
-            dtype=self.DTYPE_REAL, shape=(len(points[0]), int(jnp.prod(self.n_modes)))
+            dtype=self.DTYPE_REAL, shape=(len(points[0]), int(np.prod(self.n_modes)))
         )
         self.explicit = False
         self.points = points
