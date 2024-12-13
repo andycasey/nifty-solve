@@ -34,8 +34,8 @@ jobs:
       - name: "Install the project"
         run: uv sync --all-extras --dev
 
-      - name: "Install astra"
-        run: uv pip install -r pyproject.toml --extra jax
+      - name: "Install package"
+        run: uv pip install -e . --extra jax
 
       - name: "Run tests"
         run: |
