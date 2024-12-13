@@ -93,7 +93,6 @@ class JaxFinufft1DRealOperator(JaxFinufftRealOperator):
         """
         super().__init__(x, n_modes=n_modes, **kwargs)
         self._Hx = _halfish(n_modes)
-        return None
 
     def _pre_process_matvec(self, c):
         return jnp.hstack([1j * c[: self._Hx], c[self._Hx :]], dtype=self.DTYPE_COMPLEX)
@@ -177,7 +176,6 @@ class JaxFinufft3DRealOperator(JaxFinufftRealOperator):
         """
         super().__init__(x, y, z, n_modes=n_modes, **kwargs)
         self._Hx, self._Hy, self._Hz = tuple(map(_halfish, self.n_modes))
-        return None
 
     def _pre_process_matvec(self, c):
         c = c.reshape(self.n_modes)
