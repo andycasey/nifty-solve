@@ -23,7 +23,23 @@ def dottest_1d_real_operator(N, P):
     A = Finufft1DRealOperator(x, P, eps=EPSILON)
     dottest(A)
 
-
+def check_is_full_rank(A):
+    if np.linalg.matrix_rank(A, hermitian=(A.shape[0] == A.shape[1])) != min(A.shape):
+        diff = np.zeros((min(A.shape), min(A.shape)))
+        for i in range(min(A.shape)):
+            for j in range(min(A.shape)):
+                diff[i, j] = np.linalg.norm(A[:, i] - A[:, j])
+        
+        assert np.sum(diff < 1e-5) == min(A.shape)
+            
+        """
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        im = ax.imshow(diff)
+        plt.colorbar(im)
+        assert False
+        """
+        
 def check_design_matrix_uniqueness(Op, points, P, **kwargs):
     A = Op(*points, P, eps=EPSILON, **kwargs)
     A_dense = A.todense()
@@ -36,16 +52,18 @@ def check_design_matrix_uniqueness(Op, points, P, **kwargs):
         
         assert False
 
+    check_is_full_rank(A_dense)
+
 
 def check_design_matrix_uniqueness_1d_real_operator(N, P):
-    x = np.linspace(-np.pi, np.pi, N)
+    x = np.linspace(0, np.pi, N)
     check_design_matrix_uniqueness(Finufft1DRealOperator, (x, ), P)
 
 def check_design_matrix_uniqueness_2d_real_operator(N, P):
     Nx, Ny = expand_to_dim(N, 2)
 
-    x = np.random.uniform(-np.pi, np.pi, Nx)
-    y = np.random.uniform(-np.pi, np.pi, Ny)
+    x = np.random.uniform(0.01, np.pi, Nx)
+    y = np.random.uniform(0.01, np.pi, Ny)
     X, Y = map(lambda x: x.flatten(), np.meshgrid(x, y))
 
     check_design_matrix_uniqueness(Finufft2DRealOperator, (X, Y), P)
@@ -54,27 +72,67 @@ def check_design_matrix_uniqueness_2d_real_operator(N, P):
 def check_design_matrix_uniqueness_3d_real_operator(N, P):
     Nx, Ny, Nz = expand_to_dim(N, 3)
 
-    x = np.random.uniform(-np.pi, np.pi, Nx)
-    y = np.random.uniform(-np.pi, np.pi, Ny)
-    z = np.random.uniform(-np.pi, np.pi, Nz)
+    x = np.random.uniform(0, np.pi, Nx)
+    y = np.random.uniform(0, np.pi, Ny)
+    z = np.random.uniform(0, np.pi, Nz)
     X, Y, Z = map(lambda x: x.flatten(), np.meshgrid(x, y, z))
 
     check_design_matrix_uniqueness(Finufft3DRealOperator, (X, Y, Z), P)
     
-    
+def get_mode_indices(P):
+    mode_indices = np.zeros(P, dtype=int)
+    mode_indices[2::2] = np.arange(1, P//2 + (P % 2))
+    mode_indices[1::2] = np.arange(P//2 + (P % 2), P)[::-1]
+    return mode_indices
 
 def check_1d_real_operator_matches_design_matrix(N, P):
     x = np.linspace(-np.pi, np.pi, N)
 
-    A = Finufft1DRealOperator(x, P, modeord=1, eps=EPSILON)
+    A = Finufft1DRealOperator(x, P, eps=EPSILON)
 
-    mode_indices = np.zeros(P, dtype=int)
-    mode_indices[2::2] = np.arange(1, P//2 + (P % 2))
-    mode_indices[1::2] = np.arange(P//2 + (P % 2), P)[::-1]
+    local_mode_indices = np.hstack([0, (np.tile(np.arange(1, P // 2 + 1), 2).reshape((2, -1)).T* np.array([-1, 1])).flatten()[:P-1]])
+    finufft_mode_indices = np.arange(-P // 2 + 1, P//2 + 1)
 
-    A1 = design_matrix_as_is(x/2, P)
-    assert np.allclose(A.todense()[:, mode_indices], A1)
+    A1 = design_matrix_as_is(x/2, P)[:, np.argsort(local_mode_indices)]
+    assert np.allclose(A.todense(), A1)
 
+"""
+#def check_2d_real_operator_matches_design_matrix(Nx, Ny, Px, Py):###
+
+    x = np.linspace(-np.pi, np.pi, Nx)
+    y = np.linspace(-np.pi, np.pi, Ny)
+    xg, yg = np.meshgrid(x, y)
+    X, Y = xg.flatten(), yg.flatten()
+
+    A = Finufft2DRealOperator(X, Y, (Px, Py), eps=EPSILON)
+
+    local_mode_indices_x = np.hstack([0, (np.tile(np.arange(1, Px // 2 + 1), 2).reshape((2, -1)).T* np.array([-1, 1])).flatten()[:Px-1]])
+    local_mode_indices_y = np.hstack([0, (np.tile(np.arange(1, Py // 2 + 1), 2).reshape((2, -1)).T* np.array([-1, 1])).flatten()[:Py-1]])
+    
+    #finufft_mode_indices = np.arange(-P // 2 + 1, P//2 + 1)
+
+    Ax = design_matrix_as_is(x/2, Px)[:, np.argsort(local_mode_indices_x)]
+    Ay = design_matrix_as_is(y/2, Py)[:, np.argsort(local_mode_indices_y)]
+
+    A_xy = np.kron(Ay, Ax)
+
+    if not np.allclose(A.todense(), A_xy):
+        import matplotlib.pyplot as plt
+        fig, axes = plt.subplots(1, 7)
+        axes[0].set_title("A")
+        axes[1].set_title("Kron(Ay,Ax)")
+        axes[2].set_title("Kron(Ax,Ay)")
+
+        axes[0].imshow(A.todense())
+        axes[1].imshow(np.kron(Ay.T, Ax.T))
+        axes[2].imshow(np.kron(Ax.T, Ay.T))
+        axes[3].imshow(Ax)
+        axes[4].imshow(Ay)
+        axes[5].imshow(Finufft1DRealOperator(x, Px, eps=EPSILON).todense())
+        axes[6].imshow(Finufft1DRealOperator(y, Py, eps=EPSILON).todense())
+
+        assert False
+"""
 
 def dottest_2d_real_operator(N, P):
     if isinstance(N, int):
@@ -154,8 +212,15 @@ test_1d_real_operator_dottest_N_even_lt_P_odd = partial(dottest_1d_real_operator
 test_1d_real_operator_dottest_N_odd_lt_P_odd = partial(dottest_1d_real_operator, 171, 341)
 test_1d_real_operator_dottest_N_odd_lt_P_even = partial(dottest_1d_real_operator, 171, 338)
 
-"""
 # N > P, check design matrix
+test_1d_real_operator_matches_design_matrix_N_even_P_1 = partial(check_1d_real_operator_matches_design_matrix, 10, 1)
+test_1d_real_operator_matches_design_matrix_N_even_P_2 = partial(check_1d_real_operator_matches_design_matrix, 10, 2)
+test_1d_real_operator_matches_design_matrix_N_even_P_3 = partial(check_1d_real_operator_matches_design_matrix, 10, 3)
+test_1d_real_operator_matches_design_matrix_N_even_P_4 = partial(check_1d_real_operator_matches_design_matrix, 10, 4)
+test_1d_real_operator_matches_design_matrix_N_even_P_5 = partial(check_1d_real_operator_matches_design_matrix, 10, 5)
+test_1d_real_operator_matches_design_matrix_N_even_P_6 = partial(check_1d_real_operator_matches_design_matrix, 10, 6)
+test_1d_real_operator_matches_design_matrix_N_even_P_7 = partial(check_1d_real_operator_matches_design_matrix, 10, 7)
+
 test_1d_real_operator_matches_design_matrix_N_even_gt_P_even = partial(check_1d_real_operator_matches_design_matrix, 80, 10)
 test_1d_real_operator_matches_design_matrix_N_even_gt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 80, 11)
 test_1d_real_operator_matches_design_matrix_N_odd_gt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 81, 11)
@@ -166,14 +231,15 @@ test_1d_real_operator_matches_design_matrix_N_even_lt_P_even = partial(check_1d_
 test_1d_real_operator_matches_design_matrix_N_even_lt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 170, 341)
 test_1d_real_operator_matches_design_matrix_N_odd_lt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 173, 341)
 test_1d_real_operator_matches_design_matrix_N_odd_lt_P_even = partial(check_1d_real_operator_matches_design_matrix, 173, 338)
-"""
 
 # Test uniqueness of the dense matrix
+# Under-parameterised case
 test_1d_real_operator_design_matrix_uniqueness_N_even_gt_P_even = partial(check_design_matrix_uniqueness_1d_real_operator, 100, 10)
 test_1d_real_operator_design_matrix_uniqueness_N_even_gt_P_odd = partial(check_design_matrix_uniqueness_1d_real_operator, 100, 11)
 test_1d_real_operator_design_matrix_uniqueness_N_odd_gt_P_odd = partial(check_design_matrix_uniqueness_1d_real_operator, 101, 11)
 test_1d_real_operator_design_matrix_uniqueness_N_odd_gt_P_even = partial(check_design_matrix_uniqueness_1d_real_operator, 101, 10)
 
+# Over-parameterised case
 test_1d_real_operator_design_matrix_uniqueness_N_even_lt_P_even = partial(check_design_matrix_uniqueness_1d_real_operator, 10, 100)
 test_1d_real_operator_design_matrix_uniqueness_N_even_lt_P_odd = partial(check_design_matrix_uniqueness_1d_real_operator, 11, 100)
 test_1d_real_operator_design_matrix_uniqueness_N_odd_lt_P_odd = partial(check_design_matrix_uniqueness_1d_real_operator, 11, 101)
@@ -227,6 +293,12 @@ test_2d_real_operator_dottest_N_equal_odd_gt_P_equal_odd = partial(dottest_2d_re
 # N < P, N=(Nx, Ny), P=(Px, Py)
 test_2d_real_operator_dottest_N_equal_even_lt_P_equal_even = partial(dottest_2d_real_operator, (10, 10),  (80, 80))
 test_2d_real_operator_dottest_N_equal_odd_lt_P_equal_odd = partial(dottest_2d_real_operator, (11, 11), (81, 81))
+
+# Check design matrix computed by hand
+#test_2d_operator_matches_design_matrix_N_even_P_even = partial(check_2d_real_operator_matches_design_matrix, 8, 15, 10, 12)
+#test_2d_operator_matches_design_matrix_N_even_P_odd = partial(check_2d_real_operator_matches_design_matrix, 10, 11)
+#test_2d_operator_matches_design_matrix_N_odd_P_even = partial(check_2d_real_operator_matches_design_matrix, 9, 10)
+#test_2d_operator_matches_design_matrix_N_odd_P_odd = partial(check_2d_real_operator_matches_design_matrix, 9, 11)
 
 # Test uniqueness of the design matrix.
 test_2d_real_operator_design_matrix_uniqueness_N_even_gt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 30, 10)
