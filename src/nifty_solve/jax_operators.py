@@ -13,6 +13,9 @@ except ImportError:
         "jax or jax_finufft not installed, required for jax operators.",
         ImportWarning,
     )
+    # Need to assign jnp as np because jnp is used in type annotations.
+    jnp = np
+
 from pylops import JaxOperator, LinearOperator
 
 from .operators import _halfish, expand_to_dim
