@@ -27,8 +27,8 @@ class FinufftRealOperator(LinearOperator):
             modeord=0
         )
         self.finufft_kwds.update(kwargs) 
-        self._plan_matvec = finufft.Plan(2, **finufft_kwds)
-        self._plan_rmatvec = finufft.Plan(1, **finufft_kwds)
+        self._plan_matvec = finufft.Plan(2, **self.finufft_kwds)
+        self._plan_rmatvec = finufft.Plan(1, **self.finufft_kwds)
         self._plan_matvec.setpts(*points)
         self._plan_rmatvec.setpts(*points)
 
