@@ -133,18 +133,16 @@ class JaxFinufft2DRealOperator(JaxFinufftRealOperator):
             ordering keyword `modeord` cannot be supplied.
         """
         super().__init__(x, y, n_modes=n_modes, **kwargs)
-        self._Hx, self._Hy = tuple(map(_halfish, self.n_modes))
+        self._H = _halfish(np.prod(self.n_modes))
 
     def _pre_process_matvec(self, c):
-        c = c.reshape(self.n_modes)
-        f = 1j * c.astype(self.DTYPE_COMPLEX)
-        f = f.at[self._Hx :, self._Hy :].set(c.at[self._Hx :, self._Hy :].get())
-        return f
+        f = c.astype(self.DTYPE_COMPLEX)
+        f = f.at[:self._H].set(-1j * f.at[:self._H].get())
+        return f.reshape(self.n_modes)
 
     def _post_process_rmatvec(self, f):
-        c = f.imag
-        c = c.at[self._Hx :, self._Hy :].set(f.at[self._Hx :, self._Hy :].get().real)
-        return c
+        return np.hstack([-f[:self._H].get().imag, f[self._H:].get().real], dtype=self.DTYPE_REAL)
+
 
 
 class JaxFinufft3DRealOperator(JaxFinufftRealOperator):
