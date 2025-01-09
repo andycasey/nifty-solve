@@ -141,7 +141,9 @@ class JaxFinufft2DRealOperator(JaxFinufftRealOperator):
         return f.reshape(self.n_modes)
 
     def _post_process_rmatvec(self, f):
-        return np.hstack([-f[:self._H].get().imag, f[self._H:].get().real], dtype=self.DTYPE_REAL)
+        f.at[:self._H].set(-f.at[:self._H].get().imag)
+        return f.astype(self.DTYPE_REAL)
+        #return jnp.hstack([-f.at[:self._H].get().imag, f.at[self._H:].get().real], dtype=self.DTYPE_REAL)
 
 
 
