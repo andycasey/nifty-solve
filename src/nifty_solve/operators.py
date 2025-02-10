@@ -105,16 +105,61 @@ class Finufft2DRealOperator(FinufftRealOperator):
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """
         super().__init__(x, y, n_modes=n_modes, **kwargs)
-        self._Hx, self._Hy = tuple(map(_halfish, self.n_modes))
+
+        # For assembling basis vector into full complex (but conjugate symmetric) modes
+        if self.n_modes[0] != self.n_modes[1]:
+            raise NotImplementedError(
+                "Differing numbers of modes in each dimensions is currently not supported."
+            )
+        if self.n_modes[0] % 2 != 1:
+            raise NotImplementedError(
+                "Even numbers of modes is currently not supported."
+            )
+        self.inds_tril = np.tril_indices(n=self.n_modes[0], m=self.n_modes[1], k=-1)
 
     def _pre_process_matvec(self, c):
-        c = c.reshape(self.n_modes).astype(self.DTYPE_COMPLEX)
-        f = 0.5 * (c + np.conj(np.flip(c)))
-        return f
+        N_x, N_y = self.n_modes
+        # Split the input into halves, treating the entries as either purely real or
+        # purely imaginary
+        real_comp = c[: N_x * N_y // 2 + 1].real
+        imag_comp = c[N_x * N_y // 2 + 1 :].real
+        # Construct the diagonals using symmetry (real) and antisymmetry (imagianry)
+        modes_coefs_diag_real = np.zeros((N_x), dtype=self.DTYPE_REAL)
+        modes_coefs_diag_real[: N_x // 2 + 1] = 0.5 * np.flip(real_comp[: N_x // 2 + 1])
+        modes_coefs_diag_real += np.flip(modes_coefs_diag_real)
+        modes_coefs_diag_imag = np.zeros((N_x), dtype=self.DTYPE_REAL)
+        modes_coefs_diag_imag[: N_x // 2] = 0.5 * np.flip(imag_comp[: N_x // 2])
+        modes_coefs_diag_imag += -np.flip(modes_coefs_diag_imag)
+        # Do the same for non-diagonals
+        mode_coefs_real = np.zeros((N_x, N_y), dtype=self.DTYPE_REAL)
+        mode_coefs_real[self.inds_tril] = 0.5 * real_comp[N_x // 2 + 1 :]
+        mode_coefs_real += np.flip(mode_coefs_real)
+        mode_coefs_imag = np.zeros((N_x, N_y), dtype=self.DTYPE_REAL)
+        mode_coefs_imag[self.inds_tril] = 0.5 * imag_comp[N_x // 2 :]
+        mode_coefs_imag += -np.flip(mode_coefs_imag)
+        # Combine real + imag
+        return (
+            mode_coefs_real.astype(self.DTYPE_COMPLEX)
+            + mode_coefs_imag.astype(self.DTYPE_COMPLEX) * 1j
+            + np.diag(modes_coefs_diag_real).astype(self.DTYPE_COMPLEX)
+            + np.diag(modes_coefs_diag_imag).astype(self.DTYPE_COMPLEX) * 1j
+        )  # / (np.pi * np.sqrt(N_x * N_y))
 
     def _post_process_rmatvec(self, f):
-        c = f.real
-        return c
+        N_x, N_y = self.n_modes
+        f_ = f.reshape((N_x, N_y))
+        # Repackage mode weights in reverse of matvec
+        # Diagnoal
+        real_comp_diag = np.flip(np.diag(f_).real[: N_x // 2 + 1])
+        imag_comp_diag = np.flip(np.diag(f_).imag[: N_x // 2])
+        # Lower triangle
+        real_comp_tril = f_[self.inds_tril].real
+        imag_comp_tril = f_[self.inds_tril].imag
+        # Join
+        c = np.concatenate(
+            [real_comp_diag, real_comp_tril, imag_comp_diag, imag_comp_tril]
+        ).astype(self.DTYPE_REAL)
+        return c  # / (np.pi * np.sqrt(N_x * N_y))
 
 
 class Finufft3DRealOperator(FinufftRealOperator):
