@@ -117,6 +117,46 @@ class Finufft2DRealOperator(FinufftRealOperator):
             )
         self.inds_tril = np.tril_indices(n=self.n_modes[0], m=self.n_modes[1], k=-1)
 
+    def _reverse_reordering(self, f, coefs=True):
+        # Repackages mode weights in reverse of matvec ASSUMING conjugate symmetry in f
+        # Shape
+        N_x, N_y = self.n_modes
+        f_ = f.reshape((N_x, N_y))
+        # Diagonal
+        real_comp_diag = np.flip(np.diag(f_).real[: N_x // 2 + 1])
+        imag_comp_diag = np.flip(np.diag(f_).imag[: N_x // 2])
+        # Lower triangle
+        real_comp_tril = f_[self.inds_tril].real
+        imag_comp_tril = f_[self.inds_tril].imag
+        # Join
+        if coefs:
+            return np.concatenate(
+                [real_comp_diag, real_comp_tril, imag_comp_diag, imag_comp_tril]
+            )
+        # This is just so we can reuse the function to get the mode order
+        else:
+            return np.concatenate(
+                [real_comp_diag, real_comp_tril, real_comp_diag[1:], real_comp_tril]
+            )
+
+    def get_mode_freqs(self):
+        """
+        Get the x and y frequencies for the modes of the basis, ordered as per the input
+        vector to matvec. We do some processing and reordering to enforce symmetries
+        before giving the input to fiNUFFT, and so the fiNUFFT mode ordering does not
+        correspond 1-to-1 with the input to matvec. Use the weights from this function
+        if you want to regularise the mode weights by frequency.
+        """
+        N_x, N_y = self.n_modes
+        # Start in fiNUFFT order
+        xmodes = np.arange(N_x) - ((N_x - 1) / 2)
+        ymodes = np.arange(N_x) - ((N_y - 1) / 2)
+        xmodes, ymodes = np.meshgrid(xmodes, ymodes, indexing="ij")
+        # Reorder with reverse method
+        xmodes = self._reverse_reordering(xmodes, coefs=False)
+        ymodes = self._reverse_reordering(ymodes, coefs=False)
+        return xmodes, ymodes
+
     def _pre_process_matvec(self, c):
         N_x, N_y = self.n_modes
         # Split the input into halves, treating the entries as either purely real or
@@ -146,20 +186,7 @@ class Finufft2DRealOperator(FinufftRealOperator):
         )  # / (np.pi * np.sqrt(N_x * N_y))
 
     def _post_process_rmatvec(self, f):
-        N_x, N_y = self.n_modes
-        f_ = f.reshape((N_x, N_y))
-        # Repackage mode weights in reverse of matvec
-        # Diagnoal
-        real_comp_diag = np.flip(np.diag(f_).real[: N_x // 2 + 1])
-        imag_comp_diag = np.flip(np.diag(f_).imag[: N_x // 2])
-        # Lower triangle
-        real_comp_tril = f_[self.inds_tril].real
-        imag_comp_tril = f_[self.inds_tril].imag
-        # Join
-        c = np.concatenate(
-            [real_comp_diag, real_comp_tril, imag_comp_diag, imag_comp_tril]
-        ).astype(self.DTYPE_REAL)
-        return c  # / (np.pi * np.sqrt(N_x * N_y))
+        return self._reverse_reordering(f).astype(self.DTYPE_REAL)
 
 
 class Finufft3DRealOperator(FinufftRealOperator):
