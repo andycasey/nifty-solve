@@ -38,7 +38,6 @@ class FinufftRealOperator(LinearOperator):
         self._plan_rmatvec.setpts(*points)
 
     def _matvec(self, c):
-        # return self._plan_matvec.execute(self._pre_process_matvec(c)).real
         return self._plan_matvec.execute(self._pre_process_matvec(c))
 
     def _rmatvec(self, f):
@@ -63,20 +62,27 @@ class Finufft1DRealOperator(FinufftRealOperator):
             Keyword arguments are passed to the `finufft.Plan()` constructor.
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """
-        super().__init__(x, n_modes=n_modes, **kwargs)
-        self._Hx = _halfish(n_modes)
-
-    def _pre_process_matvec(self, c):
-        return np.hstack([-1j * c[: self._Hx], c[self._Hx :]], dtype=self.DTYPE_COMPLEX)
-
-    def _post_process_rmatvec(self, f):
-        return np.hstack(
-            [-f[: self._Hx].imag, f[self._Hx :].real], dtype=self.DTYPE_REAL
+        super().__init__(
+            x, 
+            n_modes=n_modes, 
+            # Ensure FINUFFT has an odd number of modes for symmetry so predicted values are all real
+            n_modes_or_dim=(n_modes + 1 - n_modes % 2, ),
+            **kwargs
         )
 
-    def _post_process_rmatvec(self, f):
-        c = f.real
-        return c
+    def _pre_matvec(self, c):
+        p, = self.n_modes
+        h = p // 2
+        f = np.zeros(p + 1 - p % 2, dtype=self.DTYPE_COMPLEX)
+        f[:h+1] = 0.5 * (c[:h+1] + np.hstack([c[h+1:], np.zeros(2 - p % 2)]) * 1j)
+        f += np.conj(np.flip(f))
+        return f
+
+    def _post_rmatvec(self, f):
+        p, = self.n_modes
+        h = p // 2
+        c = np.hstack([f[:h+1].real, f[:h].imag])
+        return c[:p] # Ignore hidden mode for even number modes
 
 
 class Finufft2DRealOperator(FinufftRealOperator):

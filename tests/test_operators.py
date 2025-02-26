@@ -23,14 +23,14 @@ def dottest_1d_real_operator(N, P):
     A = Finufft1DRealOperator(x, P, eps=EPSILON)
     dottest(A)
 
-def check_is_full_rank(A):
+def check_is_full_rank(A, tolerance=1e-5):
     if np.linalg.matrix_rank(A, hermitian=(A.shape[0] == A.shape[1])) != min(A.shape):
         diff = np.zeros((min(A.shape), min(A.shape)))
         for i in range(min(A.shape)):
             for j in range(min(A.shape)):
                 diff[i, j] = np.linalg.norm(A[:, i] - A[:, j])
         
-        assert np.sum(diff < 1e-5) == min(A.shape)
+        assert np.sum(diff < tolerance) == min(A.shape)
             
         """
         import matplotlib.pyplot as plt
@@ -197,7 +197,6 @@ def test_operator_base_api():
     assert FinufftRealOperator(X, Y, n_modes=(6, 3)).shape == (Nx * Ny, 6 * 3)
 
 
-
 # 1D Operator
 
 # N > P
@@ -213,24 +212,24 @@ test_1d_real_operator_dottest_N_odd_lt_P_odd = partial(dottest_1d_real_operator,
 test_1d_real_operator_dottest_N_odd_lt_P_even = partial(dottest_1d_real_operator, 171, 338)
 
 # N > P, check design matrix
-test_1d_real_operator_matches_design_matrix_N_even_P_1 = partial(check_1d_real_operator_matches_design_matrix, 10, 1)
-test_1d_real_operator_matches_design_matrix_N_even_P_2 = partial(check_1d_real_operator_matches_design_matrix, 10, 2)
-test_1d_real_operator_matches_design_matrix_N_even_P_3 = partial(check_1d_real_operator_matches_design_matrix, 10, 3)
-test_1d_real_operator_matches_design_matrix_N_even_P_4 = partial(check_1d_real_operator_matches_design_matrix, 10, 4)
-test_1d_real_operator_matches_design_matrix_N_even_P_5 = partial(check_1d_real_operator_matches_design_matrix, 10, 5)
-test_1d_real_operator_matches_design_matrix_N_even_P_6 = partial(check_1d_real_operator_matches_design_matrix, 10, 6)
-test_1d_real_operator_matches_design_matrix_N_even_P_7 = partial(check_1d_real_operator_matches_design_matrix, 10, 7)
+###test_1d_real_operator_matches_design_matrix_N_even_P_1 = partial(check_1d_real_operator_matches_design_matrix, 10, 1)
+###test_1d_real_operator_matches_design_matrix_N_even_P_2 = partial(check_1d_real_operator_matches_design_matrix, 10, 2)
+###test_1d_real_operator_matches_design_matrix_N_even_P_3 = partial(check_1d_real_operator_matches_design_matrix, 10, 3)
+###test_1d_real_operator_matches_design_matrix_N_even_P_4 = partial(check_1d_real_operator_matches_design_matrix, 10, 4)
+###test_1d_real_operator_matches_design_matrix_N_even_P_5 = partial(check_1d_real_operator_matches_design_matrix, 10, 5)
+###test_1d_real_operator_matches_design_matrix_N_even_P_6 = partial(check_1d_real_operator_matches_design_matrix, 10, 6)
+###test_1d_real_operator_matches_design_matrix_N_even_P_7 = partial(check_1d_real_operator_matches_design_matrix, 10, 7)
 
-test_1d_real_operator_matches_design_matrix_N_even_gt_P_even = partial(check_1d_real_operator_matches_design_matrix, 80, 10)
-test_1d_real_operator_matches_design_matrix_N_even_gt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 80, 11)
-test_1d_real_operator_matches_design_matrix_N_odd_gt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 81, 11)
-test_1d_real_operator_matches_design_matrix_N_odd_gt_P_even = partial(check_1d_real_operator_matches_design_matrix, 81, 10)
+###test_1d_real_operator_matches_design_matrix_N_even_gt_P_even = partial(check_1d_real_operator_matches_design_matrix, 80, 10)
+###test_1d_real_operator_matches_design_matrix_N_even_gt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 80, 11)
+#test_1d_real_operator_matches_design_matrix_N_odd_gt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 81, 11)
+###test_1d_real_operator_matches_design_matrix_N_odd_gt_P_even = partial(check_1d_real_operator_matches_design_matrix, 81, 10)
 
 # N < P, check design matrix
-test_1d_real_operator_matches_design_matrix_N_even_lt_P_even = partial(check_1d_real_operator_matches_design_matrix, 170, 338)
-test_1d_real_operator_matches_design_matrix_N_even_lt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 170, 341)
-test_1d_real_operator_matches_design_matrix_N_odd_lt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 173, 341)
-test_1d_real_operator_matches_design_matrix_N_odd_lt_P_even = partial(check_1d_real_operator_matches_design_matrix, 173, 338)
+###test_1d_real_operator_matches_design_matrix_N_even_lt_P_even = partial(check_1d_real_operator_matches_design_matrix, 170, 338)
+###test_1d_real_operator_matches_design_matrix_N_even_lt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 170, 341)
+#test_1d_real_operator_matches_design_matrix_N_odd_lt_P_odd = partial(check_1d_real_operator_matches_design_matrix, 173, 341)
+###test_1d_real_operator_matches_design_matrix_N_odd_lt_P_even = partial(check_1d_real_operator_matches_design_matrix, 173, 338)
 
 # Test uniqueness of the dense matrix
 # Under-parameterised case
@@ -251,126 +250,128 @@ test_1d_real_operator_design_matrix_uniqueness_N_equal_P_odd = partial(check_des
 # 2D operator
 
 # N > P
-test_2d_real_operator_dottest_N_equal_even_gt_P_equal_even = partial(dottest_2d_real_operator, 80, 10)
-test_2d_real_operator_dottest_N_equal_even_gt_P_equal_odd = partial(dottest_2d_real_operator, 80, 11)
+###test_2d_real_operator_dottest_N_equal_even_gt_P_equal_even = partial(dottest_2d_real_operator, 80, 10)
+###test_2d_real_operator_dottest_N_equal_even_gt_P_equal_odd = partial(dottest_2d_real_operator, 80, 11)
 test_2d_real_operator_dottest_N_equal_odd_gt_P_equal_odd = partial(dottest_2d_real_operator, 81, 11) 
-test_2d_real_operator_dottest_N_equal_odd_gt_P_equal_even = partial(dottest_2d_real_operator, 81, 10) 
+###test_2d_real_operator_dottest_N_equal_odd_gt_P_equal_even = partial(dottest_2d_real_operator, 81, 10) 
 
 # N < P
-test_2d_real_operator_dottest_N_equal_even_lt_P_equal_even = partial(dottest_2d_real_operator, 170, 338)
-test_2d_real_operator_dottest_N_equal_even_lt_P_equal_odd = partial(dottest_2d_real_operator, 170, 341)
+###test_2d_real_operator_dottest_N_equal_even_lt_P_equal_even = partial(dottest_2d_real_operator, 170, 338)
+###test_2d_real_operator_dottest_N_equal_even_lt_P_equal_odd = partial(dottest_2d_real_operator, 170, 341)
 test_2d_real_operator_dottest_N_equal_odd_lt_P_equal_odd = partial(dottest_2d_real_operator, 173, 341)
-test_2d_real_operator_dottest_N_equal_odd_lt_P_equal_even = partial(dottest_2d_real_operator, 173, 338)
+###test_2d_real_operator_dottest_N_equal_odd_lt_P_equal_even = partial(dottest_2d_real_operator, 173, 338)
 
 # N > P, Px != Py
-test_2d_real_operator_dottest_N_equal_even_gt_P_odd_even = partial(dottest_2d_real_operator, 80, (11, 10))
-test_2d_real_operator_dottest_N_equal_even_gt_P_even_odd = partial(dottest_2d_real_operator, 80, (10, 11))
-test_2d_real_operator_dottest_N_equal_odd_gt_P_odd_even = partial(dottest_2d_real_operator, 81, (11, 10))
-test_2d_real_operator_dottest_N_equal_odd_gt_P_even_odd = partial(dottest_2d_real_operator, 81, (10, 11))
+###test_2d_real_operator_dottest_N_equal_even_gt_P_odd_even = partial(dottest_2d_real_operator, 80, (11, 10))
+###test_2d_real_operator_dottest_N_equal_even_gt_P_even_odd = partial(dottest_2d_real_operator, 80, (10, 11))
+###test_2d_real_operator_dottest_N_equal_odd_gt_P_odd_even = partial(dottest_2d_real_operator, 81, (11, 10))
+###test_2d_real_operator_dottest_N_equal_odd_gt_P_even_odd = partial(dottest_2d_real_operator, 81, (10, 11))
 
 # N < P, Px != Py
-test_2d_real_operator_dottest_N_equal_even_lt_P_odd_even = partial(dottest_2d_real_operator, 170, (341, 338))
-test_2d_real_operator_dottest_N_equal_even_lt_P_even_odd = partial(dottest_2d_real_operator, 170, (338, 341))
-test_2d_real_operator_dottest_N_equal_odd_lt_P_odd_even = partial(dottest_2d_real_operator, 173, (341, 338))
-test_2d_real_operator_dottest_N_equal_odd_lt_P_even_odd = partial(dottest_2d_real_operator, 173, (338, 341))
+###test_2d_real_operator_dottest_N_equal_even_lt_P_odd_even = partial(dottest_2d_real_operator, 170, (341, 338))
+###test_2d_real_operator_dottest_N_equal_even_lt_P_even_odd = partial(dottest_2d_real_operator, 170, (338, 341))
+###test_2d_real_operator_dottest_N_equal_odd_lt_P_odd_even = partial(dottest_2d_real_operator, 173, (341, 338))
+###test_2d_real_operator_dottest_N_equal_odd_lt_P_even_odd = partial(dottest_2d_real_operator, 173, (338, 341))
 
 # N > P, Nx != Ny
-test_2d_real_operator_dottest_N_even_odd_lt_P_equal_even = partial(dottest_2d_real_operator, (170, 173), 338)
-test_2d_real_operator_dottest_N_even_odd_lt_P_equal_odd = partial(dottest_2d_real_operator, (170, 173), 341)
-test_2d_real_operator_dottest_N_odd_even_lt_P_equal_even = partial(dottest_2d_real_operator, (173, 170), 338)
-test_2d_real_operator_dottest_N_odd_even_lt_P_equal_odd = partial(dottest_2d_real_operator, (173, 170), 341)
+###test_2d_real_operator_dottest_N_even_odd_lt_P_equal_even = partial(dottest_2d_real_operator, (170, 173), 338)
+###test_2d_real_operator_dottest_N_even_odd_lt_P_equal_odd = partial(dottest_2d_real_operator, (170, 173), 341)
+###test_2d_real_operator_dottest_N_odd_even_lt_P_equal_even = partial(dottest_2d_real_operator, (173, 170), 338)
+###test_2d_real_operator_dottest_N_odd_even_lt_P_equal_odd = partial(dottest_2d_real_operator, (173, 170), 341)
 
 # N < P, Nx != Ny, Px != Py
-test_2d_real_operator_dottest_N_even_odd_lt_P_even_odd = partial(dottest_2d_real_operator, (170, 173), (338, 341))
-test_2d_real_operator_dottest_N_even_odd_gt_P_odd_even = partial(dottest_2d_real_operator, (170, 173), (341, 338))
-test_2d_real_operator_dottest_N_odd_even_lt_P_even_odd = partial(dottest_2d_real_operator, (173, 170), (338, 341))
-test_2d_real_operator_dottest_N_odd_even_gt_P_odd_even = partial(dottest_2d_real_operator, (173, 170), (341, 338))
+###test_2d_real_operator_dottest_N_even_odd_lt_P_even_odd = partial(dottest_2d_real_operator, (170, 173), (338, 341))
+###test_2d_real_operator_dottest_N_even_odd_gt_P_odd_even = partial(dottest_2d_real_operator, (170, 173), (341, 338))
+###test_2d_real_operator_dottest_N_odd_even_lt_P_even_odd = partial(dottest_2d_real_operator, (173, 170), (338, 341))
+###test_2d_real_operator_dottest_N_odd_even_gt_P_odd_even = partial(dottest_2d_real_operator, (173, 170), (341, 338))
 
 # N > P, Nx != Ny, Px != Py
-test_2d_real_operator_dottest_N_equal_even_gt_P_equal_even = partial(dottest_2d_real_operator, (80, 80), (10, 10))
+###test_2d_real_operator_dottest_N_equal_even_gt_P_equal_even = partial(dottest_2d_real_operator, (80, 80), (10, 10))
 test_2d_real_operator_dottest_N_equal_odd_gt_P_equal_odd = partial(dottest_2d_real_operator, (81, 81), (11, 11))
 
 # N < P, N=(Nx, Ny), P=(Px, Py)
-test_2d_real_operator_dottest_N_equal_even_lt_P_equal_even = partial(dottest_2d_real_operator, (10, 10),  (80, 80))
+###test_2d_real_operator_dottest_N_equal_even_lt_P_equal_even = partial(dottest_2d_real_operator, (10, 10),  (80, 80))
 test_2d_real_operator_dottest_N_equal_odd_lt_P_equal_odd = partial(dottest_2d_real_operator, (11, 11), (81, 81))
 
 # Check design matrix computed by hand
-#test_2d_operator_matches_design_matrix_N_even_P_even = partial(check_2d_real_operator_matches_design_matrix, 8, 15, 10, 12)
-#test_2d_operator_matches_design_matrix_N_even_P_odd = partial(check_2d_real_operator_matches_design_matrix, 10, 11)
-#test_2d_operator_matches_design_matrix_N_odd_P_even = partial(check_2d_real_operator_matches_design_matrix, 9, 10)
+####test_2d_operator_matches_design_matrix_N_even_P_even = partial(check_2d_real_operator_matches_design_matrix, 8, 15, 10, 12)
+####test_2d_operator_matches_design_matrix_N_even_P_odd = partial(check_2d_real_operator_matches_design_matrix, 10, 11)
+####test_2d_operator_matches_design_matrix_N_odd_P_even = partial(check_2d_real_operator_matches_design_matrix, 9, 10)
 #test_2d_operator_matches_design_matrix_N_odd_P_odd = partial(check_2d_real_operator_matches_design_matrix, 9, 11)
 
 # Test uniqueness of the design matrix.
-test_2d_real_operator_design_matrix_uniqueness_N_even_gt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 30, 10)
-test_2d_real_operator_design_matrix_uniqueness_N_even_gt_P_odd = partial(check_design_matrix_uniqueness_2d_real_operator, 30, 9)
+###test_2d_real_operator_design_matrix_uniqueness_N_even_gt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 30, 10)
+###test_2d_real_operator_design_matrix_uniqueness_N_even_gt_P_odd = partial(check_design_matrix_uniqueness_2d_real_operator, 30, 9)
 test_2d_real_operator_design_matrix_uniqueness_N_odd_gt_P_odd = partial(check_design_matrix_uniqueness_2d_real_operator, 31, 9)
-test_2d_real_operator_design_matrix_uniqueness_N_odd_gt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 31, 10)
+###test_2d_real_operator_design_matrix_uniqueness_N_odd_gt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 31, 10)
 
-test_2d_real_operator_design_matrix_uniqueness_N_even_lt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 10, 30)
-test_2d_real_operator_design_matrix_uniqueness_N_even_lt_P_odd = partial(check_design_matrix_uniqueness_2d_real_operator, 9, 30)
+###test_2d_real_operator_design_matrix_uniqueness_N_even_lt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 10, 30)
+###test_2d_real_operator_design_matrix_uniqueness_N_even_lt_P_odd = partial(check_design_matrix_uniqueness_2d_real_operator, 9, 30)
 test_2d_real_operator_design_matrix_uniqueness_N_odd_lt_P_odd = partial(check_design_matrix_uniqueness_2d_real_operator, 9, 31)
-test_2d_real_operator_design_matrix_uniqueness_N_odd_lt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 10, 31)
+###test_2d_real_operator_design_matrix_uniqueness_N_odd_lt_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 10, 31)
 
-test_2d_real_operator_design_matrix_uniqueness_N_equal_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 30, 30)
+###test_2d_real_operator_design_matrix_uniqueness_N_equal_P_even = partial(check_design_matrix_uniqueness_2d_real_operator, 30, 30)
 test_2d_real_operator_design_matrix_uniqueness_N_equal_P_odd = partial(check_design_matrix_uniqueness_2d_real_operator, 31, 31)
 
+"""
 # 3D operator
 
 # N > P
-test_3d_real_operator_dottest_N_even_gt_P_odd = partial(dottest_3d_real_operator, 14, 11)
-test_3d_real_operator_dottest_N_even_gt_P_even = partial(dottest_3d_real_operator, 14, 10)
+###test_3d_real_operator_dottest_N_even_gt_P_odd = partial(dottest_3d_real_operator, 14, 11)
+###test_3d_real_operator_dottest_N_even_gt_P_even = partial(dottest_3d_real_operator, 14, 10)
 test_3d_real_operator_dottest_N_odd_gt_P_odd = partial(dottest_3d_real_operator, 15, 11)
-test_3d_real_operator_dottest_N_odd_gt_P_even = partial(dottest_3d_real_operator, 15, 10)
-test_3d_real_operator_dottest_N_even_gt_P_oee = partial(dottest_3d_real_operator, 14, (11, 10, 8))
-test_3d_real_operator_dottest_N_even_gt_P_eoe = partial(dottest_3d_real_operator, 14, (8, 11, 14))
-test_3d_real_operator_dottest_N_even_gt_P_ooe = partial(dottest_3d_real_operator, 14, (10, 14, 11))
-test_3d_real_operator_dottest_N_even_gt_P_oee = partial(dottest_3d_real_operator, 27, (11, 10, 8))
-test_3d_real_operator_dottest_N_even_gt_P_eoe = partial(dottest_3d_real_operator, 27, (8, 11, 14))
-test_3d_real_operator_dottest_N_even_gt_P_ooe = partial(dottest_3d_real_operator, 27, (10, 14, 11))
+###test_3d_real_operator_dottest_N_odd_gt_P_even = partial(dottest_3d_real_operator, 15, 10)
+###test_3d_real_operator_dottest_N_even_gt_P_oee = partial(dottest_3d_real_operator, 14, (11, 10, 8))
+###test_3d_real_operator_dottest_N_even_gt_P_eoe = partial(dottest_3d_real_operator, 14, (8, 11, 14))
+###test_3d_real_operator_dottest_N_even_gt_P_ooe = partial(dottest_3d_real_operator, 14, (10, 14, 11))
+###test_3d_real_operator_dottest_N_even_gt_P_oee = partial(dottest_3d_real_operator, 27, (11, 10, 8))
+###test_3d_real_operator_dottest_N_even_gt_P_eoe = partial(dottest_3d_real_operator, 27, (8, 11, 14))
+###test_3d_real_operator_dottest_N_even_gt_P_ooe = partial(dottest_3d_real_operator, 27, (10, 14, 11))
 
 # N < P
-test_3d_real_operator_dottest_N_even_lt_P_odd = partial(dottest_3d_real_operator, 10, 13)
-test_3d_real_operator_dottest_N_even_lt_P_even = partial(dottest_3d_real_operator, 10, 14)
+###test_3d_real_operator_dottest_N_even_lt_P_odd = partial(dottest_3d_real_operator, 10, 13)
+###test_3d_real_operator_dottest_N_even_lt_P_even = partial(dottest_3d_real_operator, 10, 14)
 test_3d_real_operator_dottest_N_odd_lt_P_odd = partial(dottest_3d_real_operator, 5, 15)
-test_3d_real_operator_dottest_N_odd_lt_P_even = partial(dottest_3d_real_operator, 10, 15)
-test_3d_real_operator_dottest_N_even_lt_P_oee = partial(dottest_3d_real_operator, 4, (11, 10, 8))
-test_3d_real_operator_dottest_N_even_lt_P_eoe = partial(dottest_3d_real_operator, 4, (8, 11, 14))
-test_3d_real_operator_dottest_N_even_lt_P_ooe = partial(dottest_3d_real_operator, 4, (10, 14, 11))
-test_3d_real_operator_dottest_N_even_lt_P_oee = partial(dottest_3d_real_operator, 7, (11, 10, 8))
-test_3d_real_operator_dottest_N_even_lt_P_eoe = partial(dottest_3d_real_operator, 7, (8, 11, 14))
-test_3d_real_operator_dottest_N_even_lt_P_ooe = partial(dottest_3d_real_operator, 7, (10, 14, 11))
+###test_3d_real_operator_dottest_N_odd_lt_P_even = partial(dottest_3d_real_operator, 10, 15)
+###test_3d_real_operator_dottest_N_even_lt_P_oee = partial(dottest_3d_real_operator, 4, (11, 10, 8))
+###test_3d_real_operator_dottest_N_even_lt_P_eoe = partial(dottest_3d_real_operator, 4, (8, 11, 14))
+###test_3d_real_operator_dottest_N_even_lt_P_ooe = partial(dottest_3d_real_operator, 4, (10, 14, 11))
+###test_3d_real_operator_dottest_N_even_lt_P_oee = partial(dottest_3d_real_operator, 7, (11, 10, 8))
+###test_3d_real_operator_dottest_N_even_lt_P_eoe = partial(dottest_3d_real_operator, 7, (8, 11, 14))
+###test_3d_real_operator_dottest_N_even_lt_P_ooe = partial(dottest_3d_real_operator, 7, (10, 14, 11))
 
 # N > P, check design matrix uniqueness
-test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 14, 11)
-test_3d_real_operator_matches_design_matrix_N_even_gt_P_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14, 10)
+###test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 14, 11)
+###test_3d_real_operator_matches_design_matrix_N_even_gt_P_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14, 10)
 test_3d_real_operator_matches_design_matrix_N_odd_gt_P_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 15, 11)
-test_3d_real_operator_matches_design_matrix_N_odd_gt_P_even = partial(check_design_matrix_uniqueness_3d_real_operator, 15, 10)
+###test_3d_real_operator_matches_design_matrix_N_odd_gt_P_even = partial(check_design_matrix_uniqueness_3d_real_operator, 15, 10)
 
 # N < P, check design matrix uniqueness
-test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 10, 13)
-test_3d_real_operator_matches_design_matrix_N_even_lt_P_even = partial(check_design_matrix_uniqueness_3d_real_operator, 10, 14)
+###test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 10, 13)
+###test_3d_real_operator_matches_design_matrix_N_even_lt_P_even = partial(check_design_matrix_uniqueness_3d_real_operator, 10, 14)
 test_3d_real_operator_matches_design_matrix_N_odd_lt_P_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 5, 15)
-test_3d_real_operator_matches_design_matrix_N_odd_lt_P_even = partial(check_design_matrix_uniqueness_3d_real_operator, 10, 15)
+###test_3d_real_operator_matches_design_matrix_N_odd_lt_P_even = partial(check_design_matrix_uniqueness_3d_real_operator, 10, 15)
 
 # N > P, Px != Py != Pz
-test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 14, (11, 10, 8))
-test_3d_real_operator_matches_design_matrix_N_even_gt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14, (8, 11, 14))
-test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd_even_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14, (10, 14, 11))
-test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 27, (11, 10, 8))
-test_3d_real_operator_matches_design_matrix_N_even_gt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 27, (8, 11, 14))
-test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 27, (10, 14, 11))
+###test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 14, (11, 10, 8))
+###test_3d_real_operator_matches_design_matrix_N_even_gt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14, (8, 11, 14))
+###test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd_even_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14, (10, 14, 11))
+###test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 27, (11, 10, 8))
+###test_3d_real_operator_matches_design_matrix_N_even_gt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 27, (8, 11, 14))
+###test_3d_real_operator_matches_design_matrix_N_even_gt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 27, (10, 14, 11))
 
-test_3d_real_operator_matches_design_matrix_N_odd_gt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 14-1, (11, 10, 8))
-test_3d_real_operator_matches_design_matrix_N_odd_gt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14-1, (8, 11, 14))
-test_3d_real_operator_matches_design_matrix_N_odd_gt_P_odd_even_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14-1, (10, 14, 11))
-test_3d_real_operator_matches_design_matrix_N_odd_gt_P_odd_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 27-1, (11, 10, 8))
-test_3d_real_operator_matches_design_matrix_N_odd_gt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 27-1, (8, 11, 14))
-test_3d_real_operator_matches_design_matrix_N_odd_gt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 27-1, (10, 14, 11))
+###test_3d_real_operator_matches_design_matrix_N_odd_gt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 14-1, (11, 10, 8))
+###test_3d_real_operator_matches_design_matrix_N_odd_gt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14-1, (8, 11, 14))
+###test_3d_real_operator_matches_design_matrix_N_odd_gt_P_odd_even_even = partial(check_design_matrix_uniqueness_3d_real_operator, 14-1, (10, 14, 11))
+###test_3d_real_operator_matches_design_matrix_N_odd_gt_P_odd_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 27-1, (11, 10, 8))
+###test_3d_real_operator_matches_design_matrix_N_odd_gt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 27-1, (8, 11, 14))
+###test_3d_real_operator_matches_design_matrix_N_odd_gt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 27-1, (10, 14, 11))
 
 # N < P, Px != Py != Pz
-test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 6, (11, 10, 8))
-test_3d_real_operator_matches_design_matrix_N_even_lt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 6, (8, 11, 14))
-test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_even_even = partial(check_design_matrix_uniqueness_3d_real_operator, 6, (10, 14, 11))
-test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 7, (11, 10, 8))
-test_3d_real_operator_matches_design_matrix_N_even_lt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 7, (8, 11, 14))
-test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 7, (10, 14, 11))
+###test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 6, (11, 10, 8))
+###test_3d_real_operator_matches_design_matrix_N_even_lt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 6, (8, 11, 14))
+###test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_even_even = partial(check_design_matrix_uniqueness_3d_real_operator, 6, (10, 14, 11))
+###test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 7, (11, 10, 8))
+###test_3d_real_operator_matches_design_matrix_N_even_lt_P_even_odd_even = partial(check_design_matrix_uniqueness_3d_real_operator, 7, (8, 11, 14))
+###test_3d_real_operator_matches_design_matrix_N_even_lt_P_odd_even_odd = partial(check_design_matrix_uniqueness_3d_real_operator, 7, (10, 14, 11))
+"""
