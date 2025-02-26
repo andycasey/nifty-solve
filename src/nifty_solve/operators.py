@@ -38,10 +38,10 @@ class FinufftRealOperator(LinearOperator):
         self._plan_rmatvec.setpts(*points)
 
     def _matvec(self, c):
-        return self._plan_matvec.execute(self._pre_process_matvec(c))
+        return self._plan_matvec.execute(self._pre_matvec(c))
 
     def _rmatvec(self, f):
-        return self._post_process_rmatvec(
+        return self._post_rmatvec(
             self._plan_rmatvec.execute(f.astype(self.DTYPE_COMPLEX))
         )
 
@@ -163,7 +163,7 @@ class Finufft2DRealOperator(FinufftRealOperator):
         ymodes = self._reverse_reordering(ymodes, coefs=False)
         return xmodes, ymodes
 
-    def _pre_process_matvec(self, c):
+    def _pre_matvec(self, c):
         N_x, N_y = self.n_modes
         # Split the input into halves, treating the entries as either purely real or
         # purely imaginary
@@ -191,7 +191,7 @@ class Finufft2DRealOperator(FinufftRealOperator):
             + np.diag(modes_coefs_diag_imag).astype(self.DTYPE_COMPLEX) * 1j
         )  # / (np.pi * np.sqrt(N_x * N_y))
 
-    def _post_process_rmatvec(self, f):
+    def _post_rmatvec(self, f):
         return self._reverse_reordering(f).astype(self.DTYPE_REAL)
 
 
@@ -227,13 +227,13 @@ class Finufft3DRealOperator(FinufftRealOperator):
         super().__init__(x, y, z, n_modes=n_modes, **kwargs)
         self._Hx, self._Hy, self._Hz = tuple(map(_halfish, self.n_modes))
 
-    def _pre_process_matvec(self, c):
+    def _pre_matvec(self, c):
         c = c.reshape(self.n_modes)
         f = -1j * c.astype(self.DTYPE_COMPLEX)
         f[self._Hx :, self._Hy :, self._Hz :] = c[self._Hx :, self._Hy :, self._Hz :]
         return f
 
-    def _post_process_rmatvec(self, f):
+    def _post_rmatvec(self, f):
         c = -f.imag
         c[self._Hx :, self._Hy :, self._Hz :] = f[
             self._Hx :, self._Hy :, self._Hz :
