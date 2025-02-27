@@ -1,11 +1,11 @@
-from typing import Optional, Union
-
 import finufft
 import numpy as np
 import numpy.typing as npt
+from functools import cached_property
 from pylops import LinearOperator
+from typing import Optional, Union
 
-ensure_odd = lambda x: x + ((x + 1) % 2)
+from .utils import odd_ceiling, expand_to_dim
 
 class FinufftRealOperator(LinearOperator):
     def __init__(self, *points, n_modes: Union[int, tuple[int]], **kwargs):
@@ -24,8 +24,9 @@ class FinufftRealOperator(LinearOperator):
             shape=(len(points[0]), int(np.prod(n_requested_modes))),
         )
         self.explicit = False
-        self.n_modes = tuple(map(ensure_odd, n_requested_modes))
-        # We store the finufft kwds on the object in case we want to create another operator to evalaute at different points.
+        self.n_modes = tuple(map(odd_ceiling, n_requested_modes))
+        # We store the finufft kwds on the object in case we want to create 
+        # another operator to evalaute at different points.
         self.finufft_kwds = dict(
             n_modes_or_dim=self.n_modes,
             n_trans=1,
@@ -40,12 +41,11 @@ class FinufftRealOperator(LinearOperator):
         self._plan_matvec.setpts(*points)
         self._plan_rmatvec.setpts(*points)
 
-    def _pre_matvec(self, c):        
-        p = np.prod(self.n_modes)
-        h = self.shape[1] // 2
+    def _pre_matvec(self, c):
+        m, h, p = self._shape_half_p
         f = (
-            0.5  * np.hstack([c[:h+1], np.zeros(p - h - 1)]) 
-        +   0.5j * np.hstack([np.zeros(p - c.size + h + 1), c[h+1:]])
+            0.5  * np.hstack([c[:h+1],   np.zeros(p-h-1)])
+        +   0.5j * np.hstack([np.zeros(p-m+h+1), c[h+1:]])
         )
         f = f.reshape(self.n_modes)
         return f + np.conj(np.flip(f))
@@ -54,26 +54,28 @@ class FinufftRealOperator(LinearOperator):
         return self._plan_matvec.execute(self._pre_matvec(c))
 
     def _post_rmatvec(self, f):
-        h = self.shape[1] // 2
+        m, h, _ = self._shape_half_p
         f_flat = f.flatten()
-        v = np.hstack([
-            f_flat[:h].real,
-            f_flat[h].real,
-            -np.flip(f_flat[:h-(1 - self.shape[1] % 2)].imag)
-        ])[:self.shape[1]]
-        return v    
+        return np.hstack([f_flat[:h+1].real, f_flat[-(m-h-1):].imag])
 
     def _rmatvec(self, f):
-        return self._post_rmatvec(self._plan_rmatvec.execute(f.astype(self.DTYPE_COMPLEX)))
+        return self._post_rmatvec(
+            self._plan_rmatvec.execute(f.astype(self.DTYPE_COMPLEX))
+            )
+
+    @cached_property
+    def _shape_half_p(self):
+        return (self.shape[1], self.shape[1] // 2, int(np.prod(self.n_modes)))
 
 class Finufft1DRealOperator(FinufftRealOperator):
     def __init__(self, x: npt.ArrayLike, n_modes: int, **kwargs):
         """
-        A linear operator to fit a model to real-valued 1D signals with sine and cosine functions
-        using the Flatiron Institute Non-Uniform Fast Fourier Transform.
+        A linear operator to fit a model to real-valued 1D signals with sine and
+        cosine functions using the Flatiron Institute Non-Uniform Fast Fourier 
+        Transform.
 
         :param x:
-            The x-coordinates of the data. This should be within the domain [0, 2π).
+            The x-coordinates of data. This should be within the domain [0, 2π).
 
         :param n_modes:
             The number of Fourier modes to use.
@@ -93,14 +95,15 @@ class Finufft2DRealOperator(FinufftRealOperator):
         **kwargs,
     ):
         """
-        A linear operator to fit a model to real-valued 2D signals with sine and cosine functions
-        using the Flatiron Institute Non-Uniform Fast Fourier Transform.
+        A linear operator to fit a model to real-valued 2D signals with sine and
+        cosine functions using the Flatiron Institute Non-Uniform Fast Fourier 
+        Transform.
 
         :param x:
-            The x-coordinates of the data. This should be within the domain [0, 2π).
+            The x-coordinates of data. This should be within the domain [0, 2π).
 
         :param y:
-            The y-coordinates of the data. This should be within the domain [0, 2π).
+            The y-coordinates of data. This should be within the domain [0, 2π).
 
         :param n_modes:
             The number of Fourier modes to use.
@@ -121,17 +124,18 @@ class Finufft3DRealOperator(FinufftRealOperator):
         **kwargs,
     ):
         """
-        A linear operator to fit a model to real-valued 3D signals with sine and cosine functions
-        using the Flatiron Institute Non-Uniform Fast Fourier Transform.
+        A linear operator to fit a model to real-valued 3D signals with sine and
+        cosine functions using the Flatiron Institute Non-Uniform Fast Fourier 
+        Transform.
 
         :param x:
-            The x-coordinates of the data. This should be within the domain [0, 2π).
+            The x-coordinates of data. This should be within the domain [0, 2π).
 
         :param y:
-            The y-coordinates of the data. This should be within the domain [0, 2π).
+            The y-coordinates of data. This should be within the domain [0, 2π).
 
         :param z:
-            The z-coordinates of the data. This should be within the domain [0, 2π).
+            The z-coordinates of data. This should be within the domain [0, 2π).
 
         :param n_modes:
             The number of Fourier modes to use.
@@ -141,23 +145,3 @@ class Finufft3DRealOperator(FinufftRealOperator):
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """
         return super().__init__(x, y, z, n_modes=n_modes, **kwargs)
-
-def expand_to_dim(n_modes, n_dims):
-    if isinstance(n_modes, int):
-        return (n_modes,) * n_dims
-    else:
-        if isinstance(n_modes, (tuple, list, np.ndarray)):
-            if len(n_modes) == n_dims:
-                return tuple(n_modes)
-            else:
-                raise ValueError(
-                    f"Number of modes must be an integer or a tuple of length {n_dims}."
-                )
-        else:
-            raise TypeError(
-                f"Number of modes must be an integer or a tuple of integers."
-            )
-
-
-def _halfish(P: int):
-    return P // 2
