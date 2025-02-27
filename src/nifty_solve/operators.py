@@ -61,7 +61,7 @@ class FinufftRealOperator(LinearOperator):
     def _rmatvec(self, f):
         return self._post_rmatvec(
             self._plan_rmatvec.execute(f.astype(self.DTYPE_COMPLEX))
-            )
+        )
 
     @cached_property
     def _shape_half_p(self):
