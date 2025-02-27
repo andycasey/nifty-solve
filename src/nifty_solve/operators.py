@@ -76,7 +76,7 @@ class Finufft1DRealOperator(FinufftRealOperator):
         h = len(f) // 2
         c = np.hstack([f[:h+1].real, f[:h].imag])
         return c[:self.shape[1]] # Ignore hidden modes
-    
+ 
 
 class Finufft2DRealOperator(FinufftRealOperator):
     def __init__(
