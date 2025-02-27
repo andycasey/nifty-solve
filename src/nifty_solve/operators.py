@@ -40,12 +40,31 @@ class FinufftRealOperator(LinearOperator):
         self._plan_matvec.setpts(*points)
         self._plan_rmatvec.setpts(*points)
 
+    def _pre_matvec(self, c):        
+        p = np.prod(self.n_modes)
+        h = self.shape[1] // 2
+        f = (
+            0.5  * np.hstack([c[:h+1], np.zeros(p - h - 1)]) 
+        +   0.5j * np.hstack([np.zeros(p - c.size + h + 1), c[h+1:]])
+        )
+        f = f.reshape(self.n_modes)
+        return f + np.conj(np.flip(f))
+
     def _matvec(self, c):
         return self._plan_matvec.execute(self._pre_matvec(c))
 
+    def _post_rmatvec(self, f):
+        h = self.shape[1] // 2
+        f_flat = f.flatten()
+        v = np.hstack([
+            f_flat[:h].real,
+            f_flat[h].real,
+            -np.flip(f_flat[:h-(1 - self.shape[1] % 2)].imag)
+        ])[:self.shape[1]]
+        return v    
+
     def _rmatvec(self, f):
         return self._post_rmatvec(self._plan_rmatvec.execute(f.astype(self.DTYPE_COMPLEX)))
-
 
 class Finufft1DRealOperator(FinufftRealOperator):
     def __init__(self, x: npt.ArrayLike, n_modes: int, **kwargs):
@@ -63,20 +82,7 @@ class Finufft1DRealOperator(FinufftRealOperator):
             Keyword arguments are passed to the `finufft.Plan()` constructor.
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """
-        super().__init__(x, n_modes=n_modes, **kwargs)
-
-    def _pre_matvec(self, c):
-        h = self.shape[1] // 2
-        f = np.zeros(self.n_modes, dtype=self.DTYPE_COMPLEX)
-        f[:h+1] = 0.5 * (c[:h+1] + np.hstack([c[h+1:], np.zeros(2*h+2-c.size)]) * 1j)
-        f += np.conj(np.flip(f))
-        return f
-
-    def _post_rmatvec(self, f):
-        h = len(f) // 2
-        c = np.hstack([f[:h+1].real, f[:h].imag])
-        return c[:self.shape[1]] # Ignore hidden modes
- 
+        return super().__init__(x, n_modes=n_modes, **kwargs)
 
 class Finufft2DRealOperator(FinufftRealOperator):
     def __init__(
@@ -103,31 +109,7 @@ class Finufft2DRealOperator(FinufftRealOperator):
             Keyword arguments are passed to the `finufft.Plan()` constructor.
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """
-        super().__init__(x, y, n_modes=n_modes, **kwargs)
-        return None
-
-    def _pre_matvec(self, c):        
-        p = np.prod(self.n_modes)
-        h = self.shape[1] // 2
-        f = (
-            0.5  * np.hstack([c[:h+1], np.zeros(p - h - 1)]) 
-        +   0.5j * np.hstack([np.zeros(p - c.size + h + 1), c[h+1:]])
-        )
-        f = f.reshape(self.n_modes)
-        return f + np.conj(np.flip(f))
-
-
-    def _post_rmatvec(self, f):
-        h = self.shape[1] // 2
-        f_flat = f.flatten()
-        v = np.hstack([
-            f_flat[:h].real,
-            f_flat[h].real,
-            -np.flip(f_flat[:h-(1 - self.shape[1] % 2)].imag)
-        ])[:self.shape[1]]
-        return v
-
-
+        return super().__init__(x, y, n_modes=n_modes, **kwargs)
 
 class Finufft3DRealOperator(FinufftRealOperator):
     def __init__(
@@ -158,21 +140,7 @@ class Finufft3DRealOperator(FinufftRealOperator):
             Keyword arguments are passed to the `finufft.Plan()` constructor.
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """
-        super().__init__(x, y, z, n_modes=n_modes, **kwargs)
-        self._Hx, self._Hy, self._Hz = tuple(map(_halfish, self.n_modes))
-
-    def _pre_matvec(self, c):
-        c = c.reshape(self.n_modes)
-        f = -1j * c.astype(self.DTYPE_COMPLEX)
-        f[self._Hx :, self._Hy :, self._Hz :] = c[self._Hx :, self._Hy :, self._Hz :]
-        return f
-
-    def _post_rmatvec(self, f):
-        c = -f.imag
-        c[self._Hx :, self._Hy :, self._Hz :] = f[
-            self._Hx :, self._Hy :, self._Hz :
-        ].real
-        return c
+        return super().__init__(x, y, z, n_modes=n_modes, **kwargs)
 
 def expand_to_dim(n_modes, n_dims):
     if isinstance(n_modes, int):
