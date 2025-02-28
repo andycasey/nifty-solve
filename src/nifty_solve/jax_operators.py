@@ -1,9 +1,9 @@
 # jax_operators.py
 
 import warnings
-from typing import Union
-
 import numpy as np
+from typing import Union
+from functools import cached_property
 
 try:
     import jax.numpy as jnp
@@ -15,10 +15,25 @@ except ImportError:
     )
     # Need to assign jnp as np because jnp is used in type annotations.
     jnp = np
+    import finufft
+    
+    FINUFFT_MAPPING = {
+        1: (finufft.nufft1d1, finufft.nufft1d2),
+        2: (finufft.nufft2d1, finufft.nufft2d2),
+        3: (finufft.nufft3d1, finufft.nufft3d2),
+    }
+
+    def nufft1(c, *p, **kwargs):
+        f1, f2 = FINUFFT_MAPPING[c.ndim]
+        return f1(c, *p, **kwargs)
+
+    def nufft2(c, *p, **kwargs):
+        f1, f2 = FINUFFT_MAPPING[c.ndim]
+        return f2(c, *p, **kwargs)
 
 from pylops import JaxOperator, LinearOperator
 
-from .operators import _halfish, expand_to_dim
+from .utils import odd_ceiling, expand_to_dim
 
 
 class BaseMeta(type):
@@ -50,39 +65,70 @@ class JaxFinufftRealOperator(LinearOperator, metaclass=CombinedMeta):
     def __init__(self, *points, n_modes: Union[int, tuple[int]], **kwargs):
         if len(set(map(len, points))) != 1:
             raise ValueError("All point arrays must have the same length.")
-        self.n_modes = expand_to_dim(n_modes, len(points))
-
-        # We want the data types jax is using, typically float32, complex64,
-        # But the user might have specified double precision manually so we should check
+        
         self.DTYPE_REAL = jnp.array(0.0).dtype
         self.DTYPE_COMPLEX = jnp.array(0.0 + 0.0j).dtype
 
-        # Set the operator properties
+        # This is the requested number of modes, but may not be the actual.
+        n_requested_modes = expand_to_dim(n_modes, len(points))
         super().__init__(
-            dtype=self.DTYPE_REAL, shape=(len(points[0]), int(np.prod(self.n_modes)))
+            dtype=self.DTYPE_REAL,
+            shape=(len(points[0]), int(np.prod(n_requested_modes))),
         )
         self.explicit = False
+        self.n_modes = tuple(map(odd_ceiling, n_requested_modes))
+        # We store the finufft kwds on the object in case we want to create 
+        # another operator to evalaute at different points.
+        self.finufft_kwds = dict(
+            # TODO: Move these to `opts`? Check jax finufft documentation.
+            #n_modes_or_dim=self.n_modes,
+            #n_trans=1,
+            eps=1e-6,
+            #isign=None,
+            #dtype=self.DTYPE_COMPLEX.__name__,
+            #modeord=0,
+        )
+        self.finufft_kwds.update(kwargs)
         self.points = points
-        self.kwargs = kwargs
 
     def _matvec(self, c):
-        return nufft2(self._pre_process_matvec(c), *self.points, **self.kwargs).real
+        return nufft2(self._pre_matvec(c), *self.points, **self.finufft_kwds).real
 
     def _rmatvec(self, f):
-        return self._post_process_rmatvec(
+        return self._post_rmatvec(
             nufft1(
-                self.n_modes, f.astype(self.DTYPE_COMPLEX), *self.points, **self.kwargs
+                self.n_modes, 
+                f.astype(self.DTYPE_COMPLEX), 
+                *self.points, 
+                **self.finufft_kwds
             )
         )
 
+    def _pre_matvec(self, c):
+        m, h, p = self._shape_half_p
+        f = (
+            0.5  * jnp.hstack([c[:h+1],   jnp.zeros(p-h-1)])
+        +   0.5j * jnp.hstack([jnp.zeros(p-m+h+1), c[h+1:]])
+        )
+        f = f.reshape(self.n_modes)
+        return f + jnp.conj(jnp.flip(f))
+
+    def _post_rmatvec(self, f):
+        m, h, _ = self._shape_half_p
+        f_flat = f.flatten()
+        return jnp.hstack([f_flat[:h+1].real, f_flat[-(m-h-1):].imag])
+
+    @cached_property
+    def _shape_half_p(self):
+        return (self.shape[1], self.shape[1] // 2, int(np.prod(self.n_modes)))
 
 class JaxFinufft1DRealOperator(JaxFinufftRealOperator):
 
     def __init__(self, x: jnp.ndarray, n_modes: int, **kwargs):
         """
-        A linear operator to fit a model to real-valued 1D signals with sine and cosine
-        functions using jax bindings to the Flatiron Institute Non-Uniform Fast Fourier
-        Transform (fiNUFFT).
+        A linear operator to fit a model to real-valued 1D signals with sine and
+        cosine functions using jax bindings to the Flatiron Institute Non-Uniform 
+        Fast Fourier Transform (fiNUFFT).
 
         :param x:
             The x-coordinates of the data. This should be within the domain [0, 2π).
@@ -91,20 +137,10 @@ class JaxFinufft1DRealOperator(JaxFinufftRealOperator):
             The number of Fourier modes to use.
 
         :param kwargs: [Optional]
-            Keyword arguments are passed to fiNUFFT via jax_finufft. Note that the mode
-            ordering keyword `modeord` cannot be supplied.
+            Keyword arguments are passed to fiNUFFT via jax_finufft. 
+            Note that the mode ordering keyword `modeord` cannot be supplied.
         """
-        super().__init__(x, n_modes=n_modes, **kwargs)
-        self._Hx = _halfish(n_modes)
-
-    def _pre_process_matvec(self, c):
-        return jnp.hstack([1j * c[: self._Hx], c[self._Hx :]], dtype=self.DTYPE_COMPLEX)
-
-    def _post_process_rmatvec(self, f):
-        return jnp.hstack(
-            [f[: self._Hx].imag, f[self._Hx :].real], dtype=self.DTYPE_REAL
-        )
-
+        return super().__init__(x, n_modes=n_modes, **kwargs)
 
 class JaxFinufft2DRealOperator(JaxFinufftRealOperator):
     def __init__(
@@ -115,9 +151,9 @@ class JaxFinufft2DRealOperator(JaxFinufftRealOperator):
         **kwargs,
     ):
         """
-        A linear operator to fit a model to real-valued 2D signals with sine and cosine
-        functions using jax bindings to the Flatiron Institute Non-Uniform Fast Fourier
-        Transform (fiNUFFT).
+        A linear operator to fit a model to real-valued 2D signals with sine and
+        cosine functions using jax bindings to the Flatiron Institute Non-Uniform 
+        Fast Fourier Transform (fiNUFFT).
 
         :param x:
             The x-coordinates of the data. This should be within the domain [0, 2π).
@@ -129,23 +165,10 @@ class JaxFinufft2DRealOperator(JaxFinufftRealOperator):
             The number of Fourier modes to use.
 
         :param kwargs: [Optional]
-            Keyword arguments are passed to fiNUFFT via jax_finufft. Note that the mode
-            ordering keyword `modeord` cannot be supplied.
+            Keyword arguments are passed to fiNUFFT via jax_finufft. 
+            Note that the mode ordering keyword `modeord` cannot be supplied.
         """
-        super().__init__(x, y, n_modes=n_modes, **kwargs)
-        self._H = _halfish(np.prod(self.n_modes))
-
-    def _pre_process_matvec(self, c):
-        f = c.astype(self.DTYPE_COMPLEX)
-        f = f.at[:self._H].set(-1j * f.at[:self._H].get())
-        return f.reshape(self.n_modes)
-
-    def _post_process_rmatvec(self, f):
-        f.at[:self._H].set(-f.at[:self._H].get().imag)
-        return f.astype(self.DTYPE_REAL)
-        #return jnp.hstack([-f.at[:self._H].get().imag, f.at[self._H:].get().real], dtype=self.DTYPE_REAL)
-
-
+        return super().__init__(x, y, n_modes=n_modes, **kwargs)
 
 class JaxFinufft3DRealOperator(JaxFinufftRealOperator):
     def __init__(
@@ -157,9 +180,9 @@ class JaxFinufft3DRealOperator(JaxFinufftRealOperator):
         **kwargs,
     ):
         """
-        A linear operator to fit a model to real-valued 3D signals with sine and cosine
-        functions using jax bindings to the Flatiron Institute Non-Uniform Fast Fourier
-        Transform (fiNUFFT).
+        A linear operator to fit a model to real-valued 3D signals with sine and
+        cosine functions using jax bindings to the Flatiron Institute Non-Uniform 
+        Fast Fourier Transform (fiNUFFT).
 
         :param x:
             The x-coordinates of the data. This should be within the domain [0, 2π).
@@ -174,23 +197,7 @@ class JaxFinufft3DRealOperator(JaxFinufftRealOperator):
             The number of Fourier modes to use.
 
         :param kwargs: [Optional]
-            Keyword arguments are passed to fiNUFFT via jax_finufft. Note that the mode
-            ordering keyword `modeord` cannot be supplied.
+            Keyword arguments are passed to fiNUFFT via jax_finufft. 
+            Note that the mode ordering keyword `modeord` cannot be supplied.
         """
-        super().__init__(x, y, z, n_modes=n_modes, **kwargs)
-        self._Hx, self._Hy, self._Hz = tuple(map(_halfish, self.n_modes))
-
-    def _pre_process_matvec(self, c):
-        c = c.reshape(self.n_modes)
-        f = 1j * c.astype(self.DTYPE_COMPLEX)
-        f = f.at[self._Hx :, self._Hy :, self._Hz :].set(
-            c.at[self._Hx :, self._Hy :, self._Hz :].get()
-        )
-        return f
-
-    def _post_process_rmatvec(self, f):
-        c = f.imag
-        c = c.at[self._Hx :, self._Hy :, self._Hz :].set(
-            f.at[self._Hx :, self._Hy :, self._Hz :].get().real
-        )
-        return c
+        return super().__init__(x, y, z, n_modes=n_modes, **kwargs)
