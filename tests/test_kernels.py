@@ -33,5 +33,3 @@ def test_squared_exponential_kernel_accuracy_1d(
     Cov_naive = se_kernel(t[:, None] - t[None, :], length_scale)
     
     assert np.allclose(Cov, Cov_naive, atol=1e-2)
-
-test_squared_exponential_kernel_accuracy()
