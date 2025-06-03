@@ -1,4 +1,4 @@
-name: tests
+name: Unit tests
 on:
   - push
   - pull_request
@@ -10,7 +10,6 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.9"
           - "3.10"
           - "3.11"
           - "3.12"
