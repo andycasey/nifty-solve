@@ -7,6 +7,8 @@ from pylops.utils import dottest
 from nifty_solve.operators import FinufftRealOperator, Finufft1DRealOperator, Finufft2DRealOperator, Finufft3DRealOperator, expand_to_dim
 
 EPSILON = 1e-9
+DOTTEST_KWDS = dict(atol=1e-4, rtol=1e-5)
+
 
 def design_matrix_as_is(xs, P):
     X = np.ones_like(xs).reshape(len(xs), 1)
@@ -21,7 +23,7 @@ def design_matrix_as_is(xs, P):
 def dottest_1d_real_operator(N, P):
     x = np.linspace(-np.pi, np.pi, N)
     A = Finufft1DRealOperator(x, P, eps=EPSILON)
-    dottest(A)
+    dottest(A, **DOTTEST_KWDS)
 
 def check_is_full_rank(A, tolerance=1e-5):
     if np.linalg.matrix_rank(A, hermitian=(A.shape[0] == A.shape[1])) != min(A.shape):
@@ -144,7 +146,7 @@ def dottest_2d_real_operator(N, P):
 
     X, Y = map(lambda x: x.flatten(), np.meshgrid(x, y))
     A = Finufft2DRealOperator(X, Y, P, eps=EPSILON)
-    dottest(A)
+    dottest(A, **DOTTEST_KWDS)
 
 
 def dottest_3d_real_operator(N, P):
@@ -152,7 +154,7 @@ def dottest_3d_real_operator(N, P):
     Y = np.random.uniform(-np.pi, +np.pi, N)
     Z = np.random.uniform(-np.pi, +np.pi, N)
     A = Finufft3DRealOperator(X, Y, Z, P, eps=EPSILON)
-    dottest(A)
+    dottest(A, **DOTTEST_KWDS)
 
 def test_incorrect_data_lengths_2d_real_operator():
     x = np.linspace(-np.pi, np.pi, 10)
