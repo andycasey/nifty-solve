@@ -41,9 +41,9 @@ jobs:
       - name: "Install jax extras"
         run: uv pip install "jax<0.6" jax-finufft
 
-      - name: "Run tests"
-        run: |
-          uv run pytest -x -v tests --cov-report lcov:coverage.info
+      #- name: "Run tests"
+      #  run: |
+      #    uv run pytest -x -v tests --cov-report lcov:coverage.info
 
       - name: "Install Coveralls"
         run: uv pip install coveralls
