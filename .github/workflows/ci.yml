@@ -37,8 +37,8 @@ jobs:
         run: uv pip install -e .
 
       - name: Install jax dependencies
-        run: uv pip install jax jax-finufft
-
+        run: uv pip install jax "git+https://github.com/flatironinstitute/jax-finufft"
+        
       - name: Install Coveralls
         run: uv pip install coveralls
 
