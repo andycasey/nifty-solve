@@ -29,7 +29,7 @@ class FinufftOperator(LinearOperator):
         # another operator to evalaute at different points.
         self.finufft_kwds = dict(
             n_modes_or_dim=self.n_modes,
-            n_trans=1,
+            #n_trans=1,
             eps=1e-6,
             isign=None,
             dtype=self.DTYPE_COMPLEX.__name__,
@@ -40,9 +40,10 @@ class FinufftOperator(LinearOperator):
         self._plan_rmatvec = finufft.Plan(1, **self.finufft_kwds)
         self._plan_matvec.setpts(*points)
         self._plan_rmatvec.setpts(*points)
+        self.points = points
 
     def _matvec(self, c):
-        return self._plan_matvec.execute(c)
+        return self._plan_matvec.execute(c.reshape(self.n_modes))
 
     def _rmatvec(self, f):
         return self._plan_rmatvec.execute(f.astype(self.DTYPE_COMPLEX))

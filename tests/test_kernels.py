@@ -12,6 +12,8 @@ def matern_32_kernel(r, l, v=1):
 def se_kernel(d, lengthscale, variance=1):
     return variance * np.exp(-0.5 * (d/lengthscale)**2)
 
+np.random.seed(8)
+
 
 def test_squared_exponential_kernel_accuracy_1d(
     length_scale=0.1,

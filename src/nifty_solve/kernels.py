@@ -21,6 +21,45 @@ class SquaredExponential(BaseKernel):
         return 2 * hm + 1
 
 
+class SquaredExponential3D(BaseKernel):
+
+    def __init__(self, length_scale):
+        self.length_scale = np.atleast_2d(length_scale)
+        self.dimension = 3 # TODO
+
+    def spectral_density(self, frequency, ls=None):
+        ls = self.length_scale if ls is None else ls
+        l = ls / (2 * np.pi)
+        return (2 * np.pi * l**2)**(self.dimension/2) * np.exp(-2 * np.pi**2 * l**2 * (frequency)**2)
+
+    def _modes_required(self, epsilon):
+        L = 2 * np.pi # TODO
+        h_spacing = 1/(L + self.length_scale * np.sqrt(2 * np.log(4 * self.dimension * 3**self.dimension/epsilon)))
+        hm = (
+            np.ceil(np.sqrt(np.log(self.dimension*(4**(self.dimension+1))/epsilon)/2)/np.pi/self.length_scale/h_spacing)
+        ).astype(int).flatten()
+        return 2 * hm + 1
+
+class SquaredExponential2D(BaseKernel):
+
+    def __init__(self, length_scale):
+        self.length_scale = np.atleast_2d(length_scale)
+        self.dimension = 2 # TODO
+
+    def spectral_density(self, frequency, ls=None):
+        ls = self.length_scale if ls is None else ls
+        l = ls / (2 * np.pi)
+        return (2 * np.pi * l**2)**(self.dimension/2) * np.exp(-2 * np.pi**2 * l**2 * (frequency)**2)
+
+    def _modes_required(self, epsilon):
+        L = 2 * np.pi # TODO
+        h_spacing = 1/(L + self.length_scale * np.sqrt(2 * np.log(4 * self.dimension * 3**self.dimension/epsilon)))
+        hm = (
+            np.ceil(np.sqrt(np.log(self.dimension*(4**(self.dimension+1))/epsilon)/2)/np.pi/self.length_scale/h_spacing)
+        ).astype(int).flatten()
+        return 2 * hm + 1
+
+
 class MaternKernel(BaseKernel):
     def spectral_density(self, frequency):
         from math import gamma
