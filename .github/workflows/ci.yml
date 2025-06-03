@@ -43,7 +43,7 @@ jobs:
 
       - name: "Run tests"
         run: |
-          uv run pytest -v tests --cov-report lcov:coverage.info
+          uv run pytest -x -v tests --cov-report lcov:coverage.info
 
       - name: "Install Coveralls"
         run: uv pip install coveralls
