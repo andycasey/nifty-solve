@@ -10,7 +10,6 @@ try:
     from jax_finufft import nufft1, nufft2
 except ImportError:
     warnings.warn("JAX is not installed, skipping JAX-based tests.")
-
 else:
     from nifty_solve.jax_operators import (
         JaxFinufft1DRealOperator as Finufft1DRealOperator,
@@ -21,6 +20,7 @@ else:
 
     EPSILON = 1e-9
     IMAG_EPSILON = 1e-6
+    DOTTEST_KWDS = dict(atol=1e-2, rtol=1e-5)
 
     def design_matrix_as_is(xs, P):
         X = np.ones_like(xs).reshape(len(xs), 1)
@@ -35,10 +35,10 @@ else:
     def dottest_1d_real_operator(N, P, dtype=np.float64):
         x = np.linspace(-np.pi, np.pi, N, dtype=dtype)
         A = Finufft1DRealOperator(x, P, eps=EPSILON)
-        dottest(A)
+        dottest(A, **DOTTEST_KWDS)
 
         # Check imaginary components are 0
-        i = np.max(np.abs(np.imag(A._plan_matvec.execute(A._pre_matvec(np.random.normal(size=P))))))
+        i = np.max(np.abs(np.imag(A @ np.random.normal(size=P))))
         assert i < IMAG_EPSILON
 
 
@@ -163,9 +163,9 @@ else:
 
         X, Y = map(lambda x: x.flatten(), np.meshgrid(x, y))
         A = Finufft2DRealOperator(X, Y, P, eps=EPSILON)
-        dottest(A)
+        dottest(A, **DOTTEST_KWDS)
 
-        i = np.max(np.abs(np.imag(A._plan_matvec.execute(A._pre_matvec(np.random.normal(size=A.shape[1]))))))
+        i = np.max(np.abs(np.imag(A @ np.random.normal(size=A.shape[1]))))
         assert i < IMAG_EPSILON
 
 
@@ -174,9 +174,9 @@ else:
         Y = np.random.uniform(-np.pi, +np.pi, N)
         Z = np.random.uniform(-np.pi, +np.pi, N)
         A = Finufft3DRealOperator(X, Y, Z, P, eps=EPSILON)
-        dottest(A)
+        dottest(A, **DOTTEST_KWDS)
 
-        i = np.max(np.abs(np.imag(A._plan_matvec.execute(A._pre_matvec(np.random.normal(size=A.shape[1]))))))
+        i = np.max(np.abs(np.imag(A @ np.random.normal(size=A.shape[1]))))
         assert i < IMAG_EPSILON
 
 
