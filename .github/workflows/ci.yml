@@ -1,4 +1,4 @@
-name: tests
+name: Unit tests
 on:
   - push
   - pull_request
@@ -10,7 +10,6 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.9"
           - "3.10"
           - "3.11"
           - "3.12"
@@ -38,7 +37,7 @@ jobs:
         run: uv pip install -e .
 
       - name: "Install jax extras"
-        run: uv pip install jax jax-finufft
+        run: uv pip install "jax<0.6" jax-finufft
 
       - name: "Run tests"
         run: |
@@ -46,7 +45,6 @@ jobs:
 
       - name: "Install Coveralls"
         run: uv pip install coveralls
-
 
       - name: Coveralls
         env:
