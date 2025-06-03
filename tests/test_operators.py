@@ -8,7 +8,7 @@ from nifty_solve.operators import FinufftRealOperator, Finufft1DRealOperator, Fi
 
 EPSILON = 1e-9
 DOTTEST_KWDS = dict(atol=1e-4, rtol=1e-5)
-
+IMAG_EPSILON = 1e-6
 
 def design_matrix_as_is(xs, P):
     X = np.ones_like(xs).reshape(len(xs), 1)
@@ -20,10 +20,15 @@ def design_matrix_as_is(xs, P):
     return X
 
 
-def dottest_1d_real_operator(N, P):
-    x = np.linspace(-np.pi, np.pi, N)
+def dottest_1d_real_operator(N, P, dtype=np.float64):
+    x = np.linspace(-np.pi, np.pi, N, dtype=dtype)
     A = Finufft1DRealOperator(x, P, eps=EPSILON)
     dottest(A, **DOTTEST_KWDS)
+
+    # Check imaginary components are 0
+    i = np.max(np.abs(np.imag(A._plan_matvec.execute(A._pre_matvec(np.random.normal(size=P))))))
+    assert i < IMAG_EPSILON
+
 
 def check_is_full_rank(A, tolerance=1e-5):
     if np.linalg.matrix_rank(A, hermitian=(A.shape[0] == A.shape[1])) != min(A.shape):
@@ -148,6 +153,9 @@ def dottest_2d_real_operator(N, P):
     A = Finufft2DRealOperator(X, Y, P, eps=EPSILON)
     dottest(A, **DOTTEST_KWDS)
 
+    i = np.max(np.abs(np.imag(A._plan_matvec.execute(A._pre_matvec(np.random.normal(size=A.shape[1]))))))
+    assert i < IMAG_EPSILON
+
 
 def dottest_3d_real_operator(N, P):
     X = np.random.uniform(-np.pi, +np.pi, N)
@@ -155,6 +163,10 @@ def dottest_3d_real_operator(N, P):
     Z = np.random.uniform(-np.pi, +np.pi, N)
     A = Finufft3DRealOperator(X, Y, Z, P, eps=EPSILON)
     dottest(A, **DOTTEST_KWDS)
+
+    i = np.max(np.abs(np.imag(A._plan_matvec.execute(A._pre_matvec(np.random.normal(size=A.shape[1]))))))
+    assert i < IMAG_EPSILON
+
 
 def test_incorrect_data_lengths_2d_real_operator():
     x = np.linspace(-np.pi, np.pi, 10)
@@ -200,6 +212,10 @@ def test_operator_base_api():
 
 
 # 1D Operator
+
+# np float 64 vs 32
+test_1d_real_operator_dottest_float32 = partial(dottest_1d_real_operator, 80, 10, np.float32)
+
 
 # N > P
 test_1d_real_operator_dottest_N_even_gt_P_even = partial(dottest_1d_real_operator, 80, 10)

@@ -48,10 +48,11 @@ class FinufftRealOperator(LinearOperator):
         +   0.5j * np.hstack([np.zeros(p-m+h+1), c[h+1:]])
         )
         f = f.reshape(self.n_modes)
-        return f + np.conj(np.flip(f))
+        f += np.conj(np.flip(f))
+        return f.astype(self.DTYPE_COMPLEX)
 
     def _matvec(self, c):
-        return self._plan_matvec.execute(self._pre_matvec(c))
+        return self._plan_matvec.execute(self._pre_matvec(c)).real
 
     def _post_rmatvec(self, f):
         m, h, _ = self._shape_half_p
