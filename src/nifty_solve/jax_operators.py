@@ -5,10 +5,10 @@ import numpy as np
 from typing import Union
 from functools import cached_property
 
-try:
+try: # pragma: no cover
     import jax.numpy as jnp
     from jax_finufft import nufft1, nufft2
-except ImportError:
+except ImportError: # pragma: no cover
     warnings.warn(
         "jax or jax_finufft not installed, required for jax operators.",
         ImportWarning,
@@ -81,18 +81,19 @@ class JaxFinufftRealOperator(LinearOperator, metaclass=CombinedMeta):
         # another operator to evalaute at different points.
         self.finufft_kwds = dict(
             # TODO: Move these to `opts`? Check jax finufft documentation.
-            #n_modes_or_dim=self.n_modes,
-            #n_trans=1,
             eps=1e-6,
-            #isign=None,
-            #dtype=self.DTYPE_COMPLEX.__name__,
-            #modeord=0,
         )
         self.finufft_kwds.update(kwargs)
         self.points = points
 
     def _matvec(self, c):
-        return nufft2(self._pre_matvec(c), *self.points, **self.finufft_kwds).real
+        return jnp.real(
+            nufft2(
+                self._pre_matvec(c), 
+                *self.points, 
+                **self.finufft_kwds
+            )
+        )
 
     def _rmatvec(self, f):
         return self._post_rmatvec(
@@ -116,7 +117,7 @@ class JaxFinufftRealOperator(LinearOperator, metaclass=CombinedMeta):
     def _post_rmatvec(self, f):
         m, h, _ = self._shape_half_p
         f_flat = f.flatten()
-        return jnp.hstack([f_flat[:h+1].real, f_flat[-(m-h-1):].imag])
+        return jnp.hstack([jnp.real(f_flat[:h+1]), jnp.imag(f_flat[-(m-h-1):])])
 
     @cached_property
     def _shape_half_p(self):
@@ -127,8 +128,8 @@ class JaxFinufft1DRealOperator(JaxFinufftRealOperator):
     def __init__(self, x: jnp.ndarray, n_modes: int, **kwargs):
         """
         A linear operator to fit a model to real-valued 1D signals with sine and
-        cosine functions using jax bindings to the Flatiron Institute Non-Uniform 
-        Fast Fourier Transform (fiNUFFT).
+        cosine functions using JAX bindings to the Flatiron Institute Non-Uniform 
+        Fast Fourier Transform (FINUFFT).
 
         :param x:
             The x-coordinates of the data. This should be within the domain [0, 2π).
@@ -137,7 +138,7 @@ class JaxFinufft1DRealOperator(JaxFinufftRealOperator):
             The number of Fourier modes to use.
 
         :param kwargs: [Optional]
-            Keyword arguments are passed to fiNUFFT via jax_finufft. 
+            Keyword arguments are passed to FINUFFT via jax_finufft. 
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """
         return super().__init__(x, n_modes=n_modes, **kwargs)
@@ -152,8 +153,8 @@ class JaxFinufft2DRealOperator(JaxFinufftRealOperator):
     ):
         """
         A linear operator to fit a model to real-valued 2D signals with sine and
-        cosine functions using jax bindings to the Flatiron Institute Non-Uniform 
-        Fast Fourier Transform (fiNUFFT).
+        cosine functions using JAX bindings to the Flatiron Institute Non-Uniform 
+        Fast Fourier Transform (FINUFFT).
 
         :param x:
             The x-coordinates of the data. This should be within the domain [0, 2π).
@@ -165,7 +166,7 @@ class JaxFinufft2DRealOperator(JaxFinufftRealOperator):
             The number of Fourier modes to use.
 
         :param kwargs: [Optional]
-            Keyword arguments are passed to fiNUFFT via jax_finufft. 
+            Keyword arguments are passed to FINUFFT via jax_finufft. 
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """
         return super().__init__(x, y, n_modes=n_modes, **kwargs)
@@ -181,8 +182,8 @@ class JaxFinufft3DRealOperator(JaxFinufftRealOperator):
     ):
         """
         A linear operator to fit a model to real-valued 3D signals with sine and
-        cosine functions using jax bindings to the Flatiron Institute Non-Uniform 
-        Fast Fourier Transform (fiNUFFT).
+        cosine functions using JAX bindings to the Flatiron Institute Non-Uniform 
+        Fast Fourier Transform (FINUFFT).
 
         :param x:
             The x-coordinates of the data. This should be within the domain [0, 2π).
@@ -197,7 +198,7 @@ class JaxFinufft3DRealOperator(JaxFinufftRealOperator):
             The number of Fourier modes to use.
 
         :param kwargs: [Optional]
-            Keyword arguments are passed to fiNUFFT via jax_finufft. 
+            Keyword arguments are passed to FINUFFT via jax_finufft. 
             Note that the mode ordering keyword `modeord` cannot be supplied.
         """
         return super().__init__(x, y, z, n_modes=n_modes, **kwargs)

@@ -10,6 +10,8 @@ jobs:
     strategy:
       matrix:
         python-version:
+          # 3.9 is unofficially supported but not tested against because it is
+          # not supported by JAX + FINUFFT
           - "3.10"
           - "3.11"
           - "3.12"

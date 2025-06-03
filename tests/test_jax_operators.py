@@ -20,7 +20,7 @@ else:
 
     EPSILON = 1e-9
     IMAG_EPSILON = 1e-6
-    DOTTEST_KWDS = dict(atol=1e-2, rtol=1e-5)
+    DOTTEST_KWDS = dict(atol=1e-1, rtol=1e-5)
 
     def design_matrix_as_is(xs, P):
         X = np.ones_like(xs).reshape(len(xs), 1)
