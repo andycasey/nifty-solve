@@ -1,6 +1,6 @@
 [project]
 name = "nifty-solve"
-version = "0.1.0" 
+version = "0.1.1" 
 readme = "README.md"
 license = {text = "LICENSE.md"}
 description = "Nifty solver" 
@@ -18,7 +18,7 @@ dependencies = [
   "pylops",
   "scipy",
 ]
-requires-python = ">= 3.10"
+requires-python = ">= 3.9"
 
 [classifiers]
 development_status = "4 - Beta"
