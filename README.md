@@ -11,10 +11,18 @@ Fit very flexible linear models using Fourier bases without ever constructing th
 
 # Install
 
-From source:
-
 ```
-git clone git@github.com:andycasey/nifty-solve.git
+uv add nifty-solve
+```
+
+If you plan to use JAX operators, you will need to use:
+```
+uv add nifty-solve[jax]
+```
+
+If that fails:
+```
+uv add "git+https://github.com/andycasey/nifty-solve"
 ```
 
 

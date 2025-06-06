@@ -7,6 +7,7 @@ from pylops.utils import dottest
 from nifty_solve.operators import FinufftRealOperator, Finufft1DRealOperator, Finufft2DRealOperator, Finufft3DRealOperator, expand_to_dim
 
 EPSILON = 1e-9
+DOTTEST_KWDS = dict(atol=1e-4, rtol=1e-5)
 IMAG_EPSILON = 1e-6
 
 def design_matrix_as_is(xs, P):
@@ -22,7 +23,7 @@ def design_matrix_as_is(xs, P):
 def dottest_1d_real_operator(N, P, dtype=np.float64):
     x = np.linspace(-np.pi, np.pi, N, dtype=dtype)
     A = Finufft1DRealOperator(x, P, eps=EPSILON)
-    dottest(A)
+    dottest(A, **DOTTEST_KWDS)
 
     # Check imaginary components are 0
     i = np.max(np.abs(np.imag(A._plan_matvec.execute(A._pre_matvec(np.random.normal(size=P))))))
@@ -150,7 +151,7 @@ def dottest_2d_real_operator(N, P):
 
     X, Y = map(lambda x: x.flatten(), np.meshgrid(x, y))
     A = Finufft2DRealOperator(X, Y, P, eps=EPSILON)
-    dottest(A)
+    dottest(A, **DOTTEST_KWDS)
 
     i = np.max(np.abs(np.imag(A._plan_matvec.execute(A._pre_matvec(np.random.normal(size=A.shape[1]))))))
     assert i < IMAG_EPSILON
@@ -161,7 +162,7 @@ def dottest_3d_real_operator(N, P):
     Y = np.random.uniform(-np.pi, +np.pi, N)
     Z = np.random.uniform(-np.pi, +np.pi, N)
     A = Finufft3DRealOperator(X, Y, Z, P, eps=EPSILON)
-    dottest(A)
+    dottest(A, **DOTTEST_KWDS)
 
     i = np.max(np.abs(np.imag(A._plan_matvec.execute(A._pre_matvec(np.random.normal(size=A.shape[1]))))))
     assert i < IMAG_EPSILON

@@ -1,4 +1,4 @@
-name: Unit tests
+name: Tests
 on:
   - push
   - pull_request
@@ -10,6 +10,8 @@ jobs:
     strategy:
       matrix:
         python-version:
+          # 3.9 is unofficially supported but not tested against because it is
+          # not supported by JAX + FINUFFT
           - "3.10"
           - "3.11"
           - "3.12"
@@ -35,13 +37,17 @@ jobs:
       - name: Install package
         run: uv pip install -e .
 
-      - name: Install jax dependencies
-        run: uv pip install "jax<0.6.0" jax-finufft 
-        
-      - name: Install Coveralls
+      - name: "Install jax extras"
+        run: uv pip install "jax<0.6" jax-finufft
+
+      #- name: "Run tests"
+      #  run: |
+      #    uv run pytest -x -v tests --cov-report lcov:coverage.info
+
+      - name: "Install Coveralls"
         run: uv pip install coveralls
 
-      - name: Run tests
+      - name: Coveralls
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
